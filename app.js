@@ -7,9 +7,9 @@ function initMap() {
         zoomControl: false  // Desativa o controle de zoom padrão
     }).setView([-15.7801, -47.9292], 5);
     
-    // Adiciona o controle de zoom no canto direito
+    // Adiciona o controle de zoom no canto esquerdo
     L.control.zoom({
-        position: 'topright'
+        position: 'topleft'
     }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);

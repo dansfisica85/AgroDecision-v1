@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgroDecision - Educacional</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#4CAF50">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="AgroDecision">
+  
+  <!-- Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  
+  <!-- External CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- App CSS -->
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <h1>AgroDecision</h1>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-item" onclick="showScreen('home')">
+      <i>🏠</i> <span>Início</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('simulation')">
+      <i>🌾</i> <span>Simulação de Colheita</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('news')">
+      <i>📰</i> <span>Notícias Agrícolas</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('history')">
+      <i>📋</i> <span>Histórico de Simulações</span>
+    </div>
+  </nav>
+
+  <main>
+    <div id="map"></div>
+    <div id="content" class="content" style="display: none;"></div>
+  </main>
+
+  <!-- External Scripts -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="/app.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registrado com sucesso');
+          })
+          .catch(err => {
+            console.error('Erro ao registrar ServiceWorker:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

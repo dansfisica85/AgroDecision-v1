@@ -466,7 +466,6 @@ function calculateClimateProbability(temp, humidity, crop) {
 
     return (tempProb + humidityProb) / 2;
 }
-}
 
 function showCalculationDetails(type, results, inputData) {
     let title, content;

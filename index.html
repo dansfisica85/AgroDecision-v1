@@ -5,25 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AgroDecision - Educacional</title>
   
-  <!-- PWA Meta Tags -->
+  <!-- Meta Tags PWA -->
   <meta name="theme-color" content="#4CAF50">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="AgroDecision">
   
   <!-- Manifest -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="manifest.json">
   
-  <!-- Icons -->
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <!-- Ícones -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
   
-  <!-- External CSS -->
+  <!-- CSS Externos -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <!-- App CSS -->
-  <link rel="stylesheet" href="/styles.css">
+  <!-- CSS do App -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="header">
@@ -47,19 +47,24 @@
   </nav>
 
   <main>
-    <div id="map"></div>
+    <div id="map">
+      <div class="map-search-container">
+        <input type="text" class="map-search-input" placeholder="Buscar endereço..." id="addressSearch">
+        <div class="map-search-results" id="searchResults"></div>
+      </div>
+    </div>
     <div id="content" class="content" style="display: none;"></div>
   </main>
 
-  <!-- External Scripts -->
+  <!-- Scripts Externos -->
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
   
-  <!-- App Scripts -->
-  <script src="/app.js"></script>
+  <!-- Scripts do App -->
+  <script src="app.js"></script>
 
-  <!-- Service Worker Registration -->
+  <!-- Registro do Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

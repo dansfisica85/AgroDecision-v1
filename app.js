@@ -3,7 +3,15 @@ let map, marker;
 
 // Inicialização do mapa
 function initMap() {
-    map = L.map('map').setView([-15.7801, -47.9292], 5);
+    map = L.map('map', {
+        zoomControl: false  // Desativa o controle de zoom padrão
+    }).setView([-15.7801, -47.9292], 5);
+    
+    // Adiciona o controle de zoom no canto direito
+    L.control.zoom({
+        position: 'topright'
+    }).addTo(map);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     
     const initialPopup = L.popup()

@@ -2,7 +2,7 @@
     "name": "AgroDecision Educacional",
     "short_name": "AgroDecision",
     "description": "Aplicativo educacional para pequenos produtores rurais",
-    "start_url": "/",
+    "start_url": "./",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#4CAF50",

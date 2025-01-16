@@ -63,13 +63,15 @@
     height: 100vh;
     background: white;
     transition: left var(--transition-speed);
-    z-index: 1001;
+    z-index: 9999;
     padding-top: 60px;
     box-shadow: var(--card-shadow);
+    pointer-events: auto;
   }
   
   .sidebar.open {
     left: 0;
+    pointer-events: all;
   }
   
   .nav-item {
@@ -82,6 +84,7 @@
     cursor: pointer;
     margin: 0.5rem;
     border-radius: 8px;
+    font-size: 1rem;
   }
   
   .nav-item:hover {
@@ -90,7 +93,14 @@
   
   .nav-item i {
     margin-right: 1rem;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
+    min-width: 30px;
+    text-align: center;
+  }
+
+  /* Ensure map controls don't interfere with sidebar */
+  .leaflet-control-container {
+    pointer-events: auto;
   }
   
   main {

@@ -143,6 +143,7 @@ function loadSimulationScreen() {
                             <option value="">Selecione o sistema</option>
                             <option value="cerqueiro">Cerqueiro (Baseado em dados climáticos)</option>
                         </select>
+                        <small class="input-help">Sistema cerqueiro utiliza dados climáticos da NASA para otimizar a irrigação baseado em temperatura, precipitação e umidade</small>
                     </div>
 
                     <div class="input-group">

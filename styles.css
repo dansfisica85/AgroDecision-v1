@@ -145,6 +145,16 @@
     font-weight: 500;
     color: var(--text-color);
   }
+
+  .input-help {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    background: var(--background-color);
+    border-radius: 4px;
+    line-height: 1.4;
+  }
   
   .modern-input {
     padding: 0.8rem;

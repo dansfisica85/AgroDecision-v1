@@ -18,6 +18,40 @@ function initMap() {
         .setLatLng([-15.7801, -47.9292])
         .setContent('<div class="intro-popup">Selecione um local no mapa para começar</div>')
         .openOn(map);
+
+    // Adiciona funcionalidade de busca
+    const searchInput = document.getElementById('addressSearch');
+    const searchResults = document.getElementById('searchResults');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        searchResults.innerHTML = '';
+        
+        if (e.target.value.length < 3) return;
+        
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(e.target.value)}`);
+                const data = await response.json();
+                
+                searchResults.innerHTML = data.slice(0, 5).map(result => `
+                    <div class="search-result-item" onclick="selectLocation(${result.lat}, ${result.lon}, '${result.display_name}')">
+                        ${result.display_name}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro na busca:', error);
+            }
+        }, 500);
+    });
+
+    // Fecha resultados quando clicar fora
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.map-search-container')) {
+            searchResults.innerHTML = '';
+        }
+    });
         
     map.on('click', async function(e) {
         if (marker) {
@@ -31,6 +65,24 @@ function initMap() {
         window.climateData = climateData;
         saveLocation(e.latlng);
     });
+}
+
+// Função para selecionar localização da busca
+function selectLocation(lat, lon, displayName) {
+    const latlng = { lat: parseFloat(lat), lng: parseFloat(lon) };
+    
+    if (marker) {
+        marker.remove();
+    }
+    
+    marker = L.marker(latlng).addTo(map);
+    map.setView(latlng, 13);
+    
+    document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('addressSearch').value = displayName;
+    
+    saveLocation(latlng);
+    getNASAData(latlng.lat, latlng.lng);
 }
 
 // Função para salvar localização selecionada
@@ -163,7 +215,7 @@ function loadSimulationScreen() {
                 </div>
 
                 <button type="submit" class="modern-button">
-                    Simular Colheita
+                    Simular Simular Colheita
                 </button>
             </form>
 
@@ -509,170 +561,171 @@ function showCalculationDetails(type, results, inputData) {
                     <hr>
                     <p><strong>Cálculo:</strong></p>
                     <p>Data de Plantio + ${results.calculations.cycleCalc.duration} dias = ${formatarData(results.harvestDate)}</p>
+                    </div>
+                `;
+                break;
+        }
+    
+        Swal.fire({
+            title: title,
+            html: content,
+            confirmButtonText: 'Fechar',
+            confirmButtonColor: '#4CAF50',
+            width: '600px'
+        });
+    }
+    
+    // Funções de histórico
+    async function saveToHistory(simulation) {
+        const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
+        history.unshift({
+            id: Date.now(),
+            ...simulation
+        });
+        localStorage.setItem('simulationHistory', JSON.stringify(history.slice(0, 50)));
+    }
+    
+    function loadHistoryScreen() {
+        const content = document.getElementById('content');
+        const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
+    
+        if (history.length === 0) {
+            content.innerHTML = `
+                <div class="history-container">
+                    <h2>Histórico de Simulações</h2>
+                    <p class="empty-history">Nenhuma simulação encontrada</p>
                 </div>
             `;
-            break;
-    }
-
-    Swal.fire({
-        title: title,
-        html: content,
-        confirmButtonText: 'Fechar',
-        confirmButtonColor: '#4CAF50',
-        width: '600px'
-    });
-}
-
-// Funções de histórico
-async function saveToHistory(simulation) {
-    const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
-    history.unshift({
-        id: Date.now(),
-        ...simulation
-    });
-    localStorage.setItem('simulationHistory', JSON.stringify(history.slice(0, 50)));
-}
-
-function loadHistoryScreen() {
-    const content = document.getElementById('content');
-    const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
-
-    if (history.length === 0) {
+            return;
+        }
+    
         content.innerHTML = `
             <div class="history-container">
                 <h2>Histórico de Simulações</h2>
-                <p class="empty-history">Nenhuma simulação encontrada</p>
+                <div class="history-grid">
+                    ${history.map(sim => `
+                        <div class="history-card">
+                            <div class="history-header">
+                                <span>${getCropName(sim.crop)}</span>
+                                <span>${formatarData(sim.timestamp)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Área:</span>
+                                <span>${sim.area} hectares</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Produtividade:</span>
+                                <span>${sim.results.yield} ton</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Data do Plantio:</span>
+                                <span>${formatarData(sim.plantingDate)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Data da Colheita:</span>
+                                <span>${formatarData(sim.results.harvestDate)}</span>
+                            </div>
+                            <button 
+                                onclick='showCalculationDetails("complete", ${JSON.stringify(sim.results)}, ${JSON.stringify(sim)})'
+                                class="modern-button"
+                            >
+                                Ver Detalhes dos Cálculos
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         `;
-        return;
     }
-
-    content.innerHTML = `
-        <div class="history-container">
-            <h2>Histórico de Simulações</h2>
-            <div class="history-grid">
-                ${history.map(sim => `
-                    <div class="history-card">
-                        <div class="history-header">
-                            <span>${getCropName(sim.crop)}</span>
-                            <span>${formatarData(sim.timestamp)}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Área:</span>
-                            <span>${sim.area} hectares</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Produtividade:</span>
-                            <span>${sim.results.yield} ton</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Data do Plantio:<span>${formatarData(sim.plantingDate)}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span>Data da Colheita:</span>
-                            <span>${formatarData(sim.results.harvestDate)}</span>
-                        </div>
-                        <button 
-                            onclick='showCalculationDetails("complete", ${JSON.stringify(sim.results)}, ${JSON.stringify(sim)})'
-                            class="modern-button"
-                        >
-                            Ver Detalhes dos Cálculos
-                        </button>
+    
+    // Funções de notícias
+    async function loadNewsScreen() {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <div class="news-container">
+                <h2>Notícias Agrícolas</h2>
+                <div id="newsContent" class="news-grid">
+                    <div class="loading-animation">
+                        <div class="spinner"></div>
+                        <p>Carregando notícias...</p>
                     </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-}
-
-// Funções de notícias
-async function loadNewsScreen() {
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="news-container">
-            <h2>Notícias Agrícolas</h2>
-            <div id="newsContent" class="news-grid">
-                <div class="loading-animation">
-                    <div class="spinner"></div>
-                    <p>Carregando notícias...</p>
                 </div>
             </div>
-        </div>
-    `;
-
-    if (!marker) {
-        document.getElementById('newsContent').innerHTML = 
-            '<p class="empty-news">Selecione uma localização no mapa primeiro</p>';
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            `https://newsapi.org/v2/everything?q=agricultura+rural&language=pt&apiKey=YOUR_API_KEY`
-        );
-        const data = await response.json();
-
-        if (data.articles.length === 0) {
+        `;
+    
+        if (!marker) {
             document.getElementById('newsContent').innerHTML = 
-                '<p class="empty-news">Nenhuma notícia encontrada para esta região</p>';
+                '<p class="empty-news">Selecione uma localização no mapa primeiro</p>';
             return;
         }
-
-        document.getElementById('newsContent').innerHTML = data.articles
-            .slice(0, 6)
-            .map(article => `
-                <div class="news-card">
-                    <div class="news-date">${formatarData(article.publishedAt)}</div>
-                    <h3>${article.title}</h3>
-                    <p>${article.description}</p>
-                    <a href="${article.url}" target="_blank" class="news-link">Ler mais</a>
-                </div>
-            `).join('');
-
-    } catch (error) {
-        console.error('Erro ao carregar notícias:', error);
-        document.getElementById('newsContent').innerHTML = 
-            '<p class="error-message">Erro ao carregar notícias. Tente novamente mais tarde.</p>';
-    }
-}
-
-// Funções utilitárias
-function getCropName(crop) {
-    const names = {
-        soybean: 'Soja',
-        corn: 'Milho',
-        wheat: 'Trigo',
-        cotton: 'Algodão',
-        rice: 'Arroz',
-        beans: 'Feijão',
-        cassava: 'Mandioca',
-        potato: 'Batata'
-    };
-    return names[crop] || crop;
-}
-
-function showError(message) {
-    Swal.fire({
-        title: 'Erro',
-        text: message,
-        icon: 'error',
-        confirmButtonText: 'Fechar',
-        confirmButtonColor: '#4CAF50'
-    });
-}
-
-// Inicialização
-window.onload = function() {
-    initMap();
     
-    // Registrar service worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('ServiceWorker registrado com sucesso');
-            })
-            .catch(err => {
-                console.error('Erro ao registrar ServiceWorker:', err);
-            });
+        try {
+            const response = await fetch(
+                `https://newsapi.org/v2/everything?q=agricultura+rural&language=pt&apiKey=YOUR_API_KEY`
+            );
+            const data = await response.json();
+    
+            if (data.articles.length === 0) {
+                document.getElementById('newsContent').innerHTML = 
+                    '<p class="empty-news">Nenhuma notícia encontrada para esta região</p>';
+                return;
+            }
+    
+            document.getElementById('newsContent').innerHTML = data.articles
+                .slice(0, 6)
+                .map(article => `
+                    <div class="news-card">
+                        <div class="news-date">${formatarData(article.publishedAt)}</div>
+                        <h3>${article.title}</h3>
+                        <p>${article.description}</p>
+                        <a href="${article.url}" target="_blank" class="news-link">Ler mais</a>
+                    </div>
+                `).join('');
+    
+        } catch (error) {
+            console.error('Erro ao carregar notícias:', error);
+            document.getElementById('newsContent').innerHTML = 
+                '<p class="error-message">Erro ao carregar notícias. Tente novamente mais tarde.</p>';
+        }
     }
-};
+    
+    // Funções utilitárias
+    function getCropName(crop) {
+        const names = {
+            soybean: 'Soja',
+            corn: 'Milho',
+            wheat: 'Trigo',
+            cotton: 'Algodão',
+            rice: 'Arroz',
+            beans: 'Feijão',
+            cassava: 'Mandioca',
+            potato: 'Batata'
+        };
+        return names[crop] || crop;
+    }
+    
+    function showError(message) {
+        Swal.fire({
+            title: 'Erro',
+            text: message,
+            icon: 'error',
+            confirmButtonText: 'Fechar',
+            confirmButtonColor: '#4CAF50'
+        });
+    }
+    
+    // Inicialização
+    window.onload = function() {
+        initMap();
+        
+        // Registrar service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado com sucesso');
+                })
+                .catch(err => {
+                    console.error('Erro ao registrar ServiceWorker:', err);
+                });
+        }
+    };

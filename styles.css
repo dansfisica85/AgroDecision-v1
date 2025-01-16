@@ -97,10 +97,57 @@
     min-width: 30px;
     text-align: center;
   }
-
-  /* Ensure map controls don't interfere with sidebar */
+  
   .leaflet-control-container {
     pointer-events: auto;
+  }
+  
+  .leaflet-control-zoom {
+    margin-top: 80px !important;
+  }
+  
+  .map-search-container {
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 400px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+  }
+  
+  .map-search-input {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+  }
+  
+  .map-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: var(--card-shadow);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .search-result-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .search-result-item:hover {
+    background-color: var(--background-color);
   }
   
   main {
@@ -145,7 +192,7 @@
     font-weight: 500;
     color: var(--text-color);
   }
-
+  
   .input-help {
     font-size: 0.85rem;
     color: #666;
@@ -251,7 +298,7 @@
     color: var(--primary-color);
     margin-bottom: 0.5rem;
   }
-
+  
   .result-probability {
     font-size: 0.9rem;
     color: #666;
@@ -260,7 +307,7 @@
     border-radius: 4px;
     margin: 0.5rem 0;
   }
-
+  
   .result-subvalue {
     font-size: 0.9rem;
     color: #666;
@@ -343,34 +390,39 @@
     padding: 1.5rem;
     border-radius: 8px;
     margin-top: 1rem;
+}
+
+.calculation-step {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--background-color);
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    left: -100%;
   }
   
-  .calculation-step {
-    margin: 1rem 0;
-    padding: 1rem;
-    background: var(--background-color);
-    border-radius: 4px;
+  .form-grid {
+    grid-template-columns: 1fr;
   }
   
-  @media (max-width: 768px) {
-    .sidebar {
-      width: 100%;
-      left: -100%;
-    }
-    
-    .form-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .results-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .news-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .history-grid {
-      grid-template-columns: 1fr;
-    }
+  .results-grid {
+    grid-template-columns: 1fr;
   }
+  
+  .news-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .map-search-container {
+    width: 95%;
+    top: 65px;
+  }
+}

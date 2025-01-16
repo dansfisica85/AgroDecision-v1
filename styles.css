@@ -346,9 +346,21 @@
     height: 100vh;
     background: white;
     transition: left var(--transition-speed);
-    z-index: 2000;
+    z-index: 9999;
     padding-top: 60px;
     box-shadow: var(--card-shadow);
+    pointer-events: auto;
+}
+
+/* Ensure map controls don't interfere with sidebar */
+.leaflet-control-container {
+    pointer-events: auto;
+}
+
+/* Ensure sidebar is above all map elements */
+.sidebar.open {
+    left: 0;
+    pointer-events: all;
 }
 
 .nav-item {

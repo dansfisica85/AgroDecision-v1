@@ -141,9 +141,7 @@ function loadSimulationScreen() {
                         <label for="irrigation">Sistema de Irrigação</label>
                         <select class="modern-input" id="irrigation" required>
                             <option value="">Selecione o sistema</option>
-                            <option value="pivot">Pivô Central</option>
-                            <option value="drip">Gotejamento</option>
-                            <option value="sprinkler">Aspersão</option>
+                            <option value="cerqueiro">Cerqueiro (Baseado em dados climáticos)</option>
                         </select>
                     </div>
 
@@ -232,11 +230,9 @@ function calculateCropMetrics(data) {
         potato: 25.0
     };
 
-    // Fatores de eficiência de irrigação
+    // Fatores de eficiência de irrigação baseados em dados climáticos
     const irrigationEfficiency = {
-        pivot: 1.25,
-        drip: 1.5,
-        sprinkler: 1.15
+        cerqueiro: calculateIrrigationEfficiency(window.climateData)
     };
 
     // Fatores de qualidade do solo
@@ -316,8 +312,34 @@ function formatarData(data) {
     return new Date(data).toLocaleDateString('pt-BR');
 }
 
+// Função para calcular eficiência de irrigação baseada em dados climáticos
+function calculateIrrigationEfficiency(climateData) {
+    if (!climateData || !climateData.properties || !climateData.properties.parameter) {
+        return 1.0; // valor padrão se não houver dados
+    }
+
+    const data = climateData.properties.parameter;
+    const temp = data.T2M; // temperatura média
+    const precip = data.PRECTOT; // precipitação total
+    const humidity = data.RH2M; // umidade relativa
+
+    // Calcular médias
+    const avgTemp = Object.values(temp).reduce((a, b) => a + b, 0) / Object.keys(temp).length;
+    const avgPrecip = Object.values(precip).reduce((a, b) => a + b, 0) / Object.keys(precip).length;
+    const avgHumidity = Object.values(humidity).reduce((a, b) => a + b, 0) / Object.keys(humidity).length;
+
+    // Fatores de ajuste baseados em condições ideais
+    const tempFactor = avgTemp >= 20 && avgTemp <= 30 ? 1.2 : 0.8;
+    const precipFactor = avgPrecip >= 50 ? 1.3 : 0.7;
+    const humidityFactor = avgHumidity >= 60 ? 1.1 : 0.9;
+
+    return (tempFactor + precipFactor + humidityFactor) / 3;
+}
+
 function showSimulationResults(results, inputData) {
     const resultsContainer = document.getElementById('simulationResults');
+    const probabilities = calculateProbabilities(window.climateData, inputData);
+    
     resultsContainer.innerHTML = `
         <h3>Resultados da Simulação</h3>
         <div class="results-grid">
@@ -325,6 +347,7 @@ function showSimulationResults(results, inputData) {
                 <div class="result-icon">📊</div>
                 <h4>Produtividade Estimada</h4>
                 <div class="result-value">${results.yield} ton</div>
+                <div class="result-probability">Probabilidade de Sucesso: ${probabilities.yield}%</div>
                 <small>Clique para ver os cálculos</small>
             </div>
 
@@ -332,6 +355,7 @@ function showSimulationResults(results, inputData) {
                 <div class="result-icon">💧</div>
                 <h4>Necessidade Hídrica</h4>
                 <div class="result-value">${results.water} mm</div>
+                <div class="result-probability">Probabilidade de Disponibilidade: ${probabilities.water}%</div>
                 <small>Clique para ver os cálculos</small>
             </div>
 
@@ -340,10 +364,108 @@ function showSimulationResults(results, inputData) {
                 <h4>Ciclo e Colheita</h4>
                 <div class="result-value">${results.cycle} dias</div>
                 <div class="result-subvalue">Colheita prevista: ${formatarData(results.harvestDate)}</div>
+                <div class="result-probability">Condições Climáticas Favoráveis: ${probabilities.climate}%</div>
                 <small>Clique para ver os cálculos</small>
             </div>
         </div>
     `;
+}
+
+// Função para calcular probabilidades baseadas nos dados climáticos
+function calculateProbabilities(climateData, inputData) {
+    if (!climateData || !climateData.properties || !climateData.properties.parameter) {
+        return {
+            yield: 50,
+            water: 50,
+            climate: 50
+        };
+    }
+
+    const data = climateData.properties.parameter;
+    const temp = data.T2M;
+    const precip = data.PRECTOT;
+    const humidity = data.RH2M;
+
+    // Calcular médias e desvios
+    const avgTemp = Object.values(temp).reduce((a, b) => a + b, 0) / Object.keys(temp).length;
+    const avgPrecip = Object.values(precip).reduce((a, b) => a + b, 0) / Object.keys(precip).length;
+    const avgHumidity = Object.values(humidity).reduce((a, b) => a + b, 0) / Object.keys(humidity).length;
+
+    // Probabilidade de produtividade baseada em condições ideais
+    const yieldProb = calculateYieldProbability(avgTemp, avgPrecip, avgHumidity, inputData.crop);
+    
+    // Probabilidade de disponibilidade hídrica
+    const waterProb = calculateWaterProbability(avgPrecip, inputData.crop);
+    
+    // Probabilidade de condições climáticas favoráveis
+    const climateProb = calculateClimateProbability(avgTemp, avgHumidity, inputData.crop);
+
+    return {
+        yield: Math.round(yieldProb * 100),
+        water: Math.round(waterProb * 100),
+        climate: Math.round(climateProb * 100)
+    };
+}
+
+function calculateYieldProbability(temp, precip, humidity, crop) {
+    // Condições ideais por cultura
+    const idealConditions = {
+        soybean: { temp: 25, precip: 500, humidity: 70 },
+        corn: { temp: 27, precip: 600, humidity: 65 },
+        wheat: { temp: 20, precip: 400, humidity: 60 },
+        cotton: { temp: 28, precip: 700, humidity: 65 },
+        rice: { temp: 25, precip: 1000, humidity: 75 },
+        beans: { temp: 22, precip: 350, humidity: 65 },
+        cassava: { temp: 24, precip: 700, humidity: 70 },
+        potato: { temp: 18, precip: 450, humidity: 75 }
+    };
+
+    const ideal = idealConditions[crop];
+    
+    // Calcular desvios das condições ideais
+    const tempDev = 1 - Math.abs(temp - ideal.temp) / ideal.temp;
+    const precipDev = 1 - Math.abs(precip - ideal.precip) / ideal.precip;
+    const humidityDev = 1 - Math.abs(humidity - ideal.humidity) / ideal.humidity;
+
+    return (tempDev + precipDev + humidityDev) / 3;
+}
+
+function calculateWaterProbability(precip, crop) {
+    const minPrecip = {
+        soybean: 450,
+        corn: 500,
+        wheat: 350,
+        cotton: 600,
+        rice: 1000,
+        beans: 300,
+        cassava: 600,
+        potato: 400
+    };
+
+    return Math.min(1, precip / minPrecip[crop]);
+}
+
+function calculateClimateProbability(temp, humidity, crop) {
+    const idealTemp = {
+        soybean: [20, 30],
+        corn: [22, 32],
+        wheat: [15, 25],
+        cotton: [23, 33],
+        rice: [20, 30],
+        beans: [17, 27],
+        cassava: [19, 29],
+        potato: [15, 25]
+    };
+
+    const tempRange = idealTemp[crop];
+    const tempProb = temp >= tempRange[0] && temp <= tempRange[1] ? 
+        1 : 1 - Math.min(Math.abs(temp - tempRange[0]), Math.abs(temp - tempRange[1])) / 10;
+
+    const humidityProb = humidity >= 60 && humidity <= 80 ? 
+        1 : 1 - Math.abs(humidity - 70) / 70;
+
+    return (tempProb + humidityProb) / 2;
+}
 }
 
 function showCalculationDetails(type, results, inputData) {

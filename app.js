@@ -842,4 +842,20 @@ function showCalculationDetails(type, results, inputData) {
                     console.error('Erro ao registrar ServiceWorker:', err);
                 });
         }
+
+        // Verificar hash da URL e mostrar tela apropriada
+        const hash = window.location.hash.slice(1); // Remove o # do início
+        if (hash) {
+            showScreen(hash);
+        }
     };
+
+    // Adicionar listener para mudanças no hash
+    window.addEventListener('hashchange', function() {
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+            showScreen(hash);
+        } else {
+            showScreen('home');
+        }
+    });

@@ -553,25 +553,41 @@ function calculateWaterProbability(precip, crop) {
 }
 
 function calculateClimateProbability(temp, humidity, crop) {
-    const idealTemp = {
-        soybean: [20, 30],
-        corn: [22, 32],
-        wheat: [15, 25],
-        cotton: [23, 33],
-        rice: [20, 30],
-        beans: [17, 27],
-        cassava: [19, 29],
-        potato: [15, 25]
+    // Validação de entrada
+    if (!temp || !humidity || !crop || typeof temp !== 'number' || typeof humidity !== 'number') {
+        return 0.5; // Probabilidade neutra para dados inválidos
+    }
+
+    const idealConditions = {
+        soybean: { temp: { min: 20, optimal: 25, max: 30 }, humidity: { min: 60, optimal: 70, max: 80 } },
+        corn: { temp: { min: 22, optimal: 27, max: 32 }, humidity: { min: 55, optimal: 65, max: 75 } },
+        wheat: { temp: { min: 15, optimal: 20, max: 25 }, humidity: { min: 50, optimal: 60, max: 70 } },
+        cotton: { temp: { min: 23, optimal: 28, max: 33 }, humidity: { min: 55, optimal: 65, max: 75 } },
+        rice: { temp: { min: 20, optimal: 25, max: 30 }, humidity: { min: 65, optimal: 75, max: 85 } },
+        beans: { temp: { min: 17, optimal: 22, max: 27 }, humidity: { min: 55, optimal: 65, max: 75 } },
+        cassava: { temp: { min: 19, optimal: 24, max: 29 }, humidity: { min: 60, optimal: 70, max: 80 } },
+        potato: { temp: { min: 15, optimal: 20, max: 25 }, humidity: { min: 65, optimal: 75, max: 85 } }
     };
 
-    const tempRange = idealTemp[crop];
-    const tempProb = temp >= tempRange[0] && temp <= tempRange[1] ? 
-        1 : 1 - Math.min(Math.abs(temp - tempRange[0]), Math.abs(temp - tempRange[1])) / 10;
+    const ideal = idealConditions[crop];
+    if (!ideal) return 0.5;
 
-    const humidityProb = humidity >= 60 && humidity <= 80 ? 
-        1 : 1 - Math.abs(humidity - 70) / 70;
+    // Função sigmoide para calcular probabilidade
+    const sigmoid = (x, min, optimal, max) => {
+        if (x < min) return Math.exp(-Math.pow(min - x, 2) / (2 * Math.pow(min - optimal, 2)));
+        if (x > max) return Math.exp(-Math.pow(x - max, 2) / (2 * Math.pow(max - optimal, 2)));
+        return 1;
+    };
 
-    return (tempProb + humidityProb) / 2;
+    // Calcular probabilidades individuais
+    const tempProb = sigmoid(temp, ideal.temp.min, ideal.temp.optimal, ideal.temp.max);
+    const humidityProb = sigmoid(humidity, ideal.humidity.min, ideal.humidity.optimal, ideal.humidity.max);
+
+    // Combinar probabilidades com pesos
+    const combinedProb = (tempProb * 0.6) + (humidityProb * 0.4); // Temperatura tem peso maior
+
+    // Garantir limites realistas
+    return Math.min(0.95, Math.max(0.05, combinedProb));
 }
 
 function showCalculationDetails(type, results, inputData) {

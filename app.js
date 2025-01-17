@@ -368,25 +368,41 @@ function formatarData(data) {
 // Função para calcular eficiência de irrigação baseada em dados climáticos
 function calculateIrrigationEfficiency(climateData) {
     if (!climateData || !climateData.properties || !climateData.properties.parameter) {
-        return 1.0; // valor padrão se não houver dados
+        return 0.7; // Eficiência padrão conservadora
     }
 
     const data = climateData.properties.parameter;
-    const temp = data.T2M; // temperatura média
-    const precip = data.PRECTOT; // precipitação total
-    const humidity = data.RH2M; // umidade relativa
+    const temp = data.T2M;
+    const precip = data.PRECTOT;
+    const humidity = data.RH2M;
 
-    // Calcular médias
-    const avgTemp = Object.values(temp).reduce((a, b) => a + b, 0) / Object.keys(temp).length;
-    const avgPrecip = Object.values(precip).reduce((a, b) => a + b, 0) / Object.keys(precip).length;
-    const avgHumidity = Object.values(humidity).reduce((a, b) => a + b, 0) / Object.keys(humidity).length;
+    // Calcular médias com validação
+    const calcAverage = (values) => {
+        const nums = Object.values(values).filter(v => typeof v === 'number' && !isNaN(v));
+        return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+    };
 
-    // Fatores de ajuste baseados em condições ideais
-    const tempFactor = avgTemp >= 20 && avgTemp <= 30 ? 1.2 : 0.8;
-    const precipFactor = avgPrecip >= 50 ? 1.3 : 0.7;
-    const humidityFactor = avgHumidity >= 60 ? 1.1 : 0.9;
+    const avgTemp = calcAverage(temp);
+    const avgPrecip = calcAverage(precip);
+    const avgHumidity = calcAverage(humidity);
 
-    return (tempFactor + precipFactor + humidityFactor) / 3;
+    if (avgTemp === null || avgPrecip === null || avgHumidity === null) {
+        return 0.7; // Valor padrão se dados inválidos
+    }
+
+    // Função sigmoide para suavizar transições
+    const sigmoid = (x, center, steepness) => 1 / (1 + Math.exp(-steepness * (x - center)));
+
+    // Fatores de eficiência com curvas não-lineares
+    const tempEff = sigmoid(avgTemp, 25, 0.2) * (avgTemp <= 35 ? 1 : Math.exp(-(avgTemp - 35) / 5));
+    const precipEff = Math.exp(-Math.pow(avgPrecip - 50, 2) / 5000);
+    const humidityEff = sigmoid(avgHumidity, 65, 0.1);
+
+    // Pesos para cada fator
+    const efficiency = (tempEff * 0.4 + precipEff * 0.3 + humidityEff * 0.3);
+
+    // Garantir limites realistas
+    return Math.min(0.95, Math.max(0.4, efficiency));
 }
 
 function showSimulationResults(results, inputData) {
@@ -461,41 +477,79 @@ function calculateProbabilities(climateData, inputData) {
 }
 
 function calculateYieldProbability(temp, precip, humidity, crop) {
-    // Condições ideais por cultura
+    // Validação de entrada
+    if (!temp || !precip || !humidity || !crop) {
+        return 0.5; // Probabilidade neutra para dados inválidos
+    }
+
     const idealConditions = {
-        soybean: { temp: 25, precip: 500, humidity: 70 },
-        corn: { temp: 27, precip: 600, humidity: 65 },
-        wheat: { temp: 20, precip: 400, humidity: 60 },
-        cotton: { temp: 28, precip: 700, humidity: 65 },
-        rice: { temp: 25, precip: 1000, humidity: 75 },
-        beans: { temp: 22, precip: 350, humidity: 65 },
-        cassava: { temp: 24, precip: 700, humidity: 70 },
-        potato: { temp: 18, precip: 450, humidity: 75 }
+        soybean: { temp: [20, 30], precip: [450, 700], humidity: [60, 80] },
+        corn: { temp: [22, 32], precip: [500, 800], humidity: [55, 75] },
+        wheat: { temp: [15, 25], precip: [350, 450], humidity: [50, 70] },
+        cotton: { temp: [23, 33], precip: [600, 800], humidity: [55, 75] },
+        rice: { temp: [20, 30], precip: [800, 1200], humidity: [65, 85] },
+        beans: { temp: [17, 27], precip: [300, 400], humidity: [55, 75] },
+        cassava: { temp: [19, 29], precip: [600, 800], humidity: [60, 80] },
+        potato: { temp: [15, 25], precip: [400, 500], humidity: [65, 85] }
     };
 
     const ideal = idealConditions[crop];
-    
-    // Calcular desvios das condições ideais
-    const tempDev = 1 - Math.abs(temp - ideal.temp) / ideal.temp;
-    const precipDev = 1 - Math.abs(precip - ideal.precip) / ideal.precip;
-    const humidityDev = 1 - Math.abs(humidity - ideal.humidity) / ideal.humidity;
+    if (!ideal) return 0.5;
 
-    return (tempDev + precipDev + humidityDev) / 3;
+    // Função gaussiana para calcular adequação
+    const gaussian = (x, min, max) => {
+        const mean = (min + max) / 2;
+        const std = (max - min) / 4;
+        return Math.exp(-Math.pow(x - mean, 2) / (2 * Math.pow(std, 2)));
+    };
+
+    // Calcular probabilidades individuais
+    const tempProb = gaussian(temp, ideal.temp[0], ideal.temp[1]);
+    const precipProb = gaussian(precip, ideal.precip[0], ideal.precip[1]);
+    const humidityProb = gaussian(humidity, ideal.humidity[0], ideal.humidity[1]);
+
+    // Pesos diferentes para cada fator
+    const weightedProb = (tempProb * 0.4) + (precipProb * 0.35) + (humidityProb * 0.25);
+
+    // Garantir limites realistas
+    return Math.min(0.95, Math.max(0.05, weightedProb));
 }
 
 function calculateWaterProbability(precip, crop) {
-    const minPrecip = {
-        soybean: 450,
-        corn: 500,
-        wheat: 350,
-        cotton: 600,
-        rice: 1000,
-        beans: 300,
-        cassava: 600,
-        potato: 400
+    // Validação de entrada
+    if (!precip || !crop) {
+        return 0.5; // Probabilidade neutra para dados inválidos
+    }
+
+    const waterRequirements = {
+        soybean: { min: 450, optimal: 550, max: 800 },
+        corn: { min: 500, optimal: 650, max: 900 },
+        wheat: { min: 350, optimal: 450, max: 600 },
+        cotton: { min: 600, optimal: 750, max: 1000 },
+        rice: { min: 1000, optimal: 1200, max: 1500 },
+        beans: { min: 300, optimal: 400, max: 550 },
+        cassava: { min: 600, optimal: 750, max: 1000 },
+        potato: { min: 400, optimal: 500, max: 700 }
     };
 
-    return Math.min(1, precip / minPrecip[crop]);
+    const req = waterRequirements[crop];
+    if (!req) return 0.5;
+
+    // Função de probabilidade baseada em curva sigmoide
+    const calcProb = (x, min, optimal, max) => {
+        if (x < min) return Math.max(0.05, x / min);
+        if (x > max) return Math.max(0.05, 1 - (x - max) / max);
+        
+        const leftSide = x <= optimal;
+        const reference = leftSide ? min : max;
+        const target = optimal;
+        const value = leftSide ? x : max - (x - optimal);
+        const range = Math.abs(target - reference);
+        
+        return Math.min(0.95, 0.5 + (value / range) * 0.45);
+    };
+
+    return calcProb(precip, req.min, req.optimal, req.max);
 }
 
 function calculateClimateProbability(temp, humidity, crop) {

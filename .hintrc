@@ -19,6 +19,12 @@
           "backdrop-filter"
         ]
       }
+    ],
+    "axe/aria": [
+      "default",
+      {
+        "aria-input-field-name": "off"
+      }
     ]
   },
   "browserslist": [

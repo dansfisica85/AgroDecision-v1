@@ -1,62 +1,19 @@
-// Variáveis globais
+// Configurações e Variáveis Globais
 let map, marker;
 window.climateData = null;
+
+// Chave da API GNews - Substitua pela sua chave
+const GNEWS_API_KEY = 'SUA_CHAVE_AQUI';
 
 // Dados base de produtividade (ton/hectare)
 const baseYield = {
     soybean: 3.5,     // Soja
     corn: 6.0,        // Milho
     wheat: 3.2,       // Trigo
-    cotton: 4.5,      // Algodão
-    rice: 4.8,        // Arroz
-    beans: 2.5,       // Feijão
-    cassava: 20.0,    // Mandioca
-    potato: 25.0,     // Batata
-    sugarcane: 75.0,  // Cana-de-açúcar
-    coffee: 2.0,      // Café
-    orange: 30.0,     // Laranja
-    grape: 15.0,      // Uva
-    apple: 35.0,      // Maçã
-    banana: 40.0,     // Banana
-    mango: 25.0,      // Manga
-    papaya: 45.0,     // Mamão
-    pineapple: 40.0,  // Abacaxi
-    watermelon: 35.0, // Melancia
-    melon: 25.0,      // Melão
-    tomato: 80.0,     // Tomate
-    onion: 30.0,      // Cebola
-    carrot: 35.0,     // Cenoura
-    lettuce: 25.0,    // Alface
-    cabbage: 45.0,    // Repolho
-    pepper: 30.0,     // Pimentão
-    cucumber: 40.0,   // Pepino
-    garlic: 12.0,     // Alho
-    peanut: 3.0,      // Amendoim
-    sunflower: 2.5,   // Girassol
-    tobacco: 2.2,     // Tabaco
-    eucalyptus: 45.0, // Eucalipto
-    pine: 35.0,       // Pinus
-    rubber: 2.0,      // Seringueira
-    palm: 25.0,       // Palmeira
-    coconut: 15.0,    // Coco
-    avocado: 20.0,    // Abacate
-    lemon: 25.0,      // Limão
-    tangerine: 22.0,  // Tangerina
-    passion_fruit: 15.0, // Maracujá
-    guava: 25.0,      // Goiaba
-    fig: 12.0,        // Figo
-    peach: 20.0,      // Pêssego
-    plum: 15.0,       // Ameixa
-    pear: 25.0,       // Pera
-    strawberry: 35.0, // Morango
-    blackberry: 12.0, // Amora
-    raspberry: 10.0,  // Framboesa
-    blueberry: 8.0,   // Mirtilo
-    acai: 10.0,       // Açaí
-    cashew: 1.5       // Caju
+    // ... (outros cultivos)
 };
 
-// Inicialização do mapa
+// Inicialização do Mapa
 async function initMap() {
     try {
         map = L.map('map', {
@@ -73,203 +30,123 @@ async function initMap() {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
         
-        const initialPopup = L.popup()
-            .setLatLng([-15.7801, -47.9292])
-            .setContent('<div class="intro-popup">Selecione um local no mapa para começar</div>')
-            .openOn(map);
-
-        // Restaurar localização anterior
-        const savedLocation = localStorage.getItem('selectedLocation');
-        if (savedLocation) {
-            const location = JSON.parse(savedLocation);
-            if (location.lat && location.lng) {
-                selectLocation(location.lat, location.lng, 'Local Anterior');
-            }
-        }
-
-        setupSearch();
-        setupMapClickHandler();
+        showInitialPopup();
+        setupMapHandlers();
+        loadSavedLocation();
     } catch (error) {
-        console.error('Erro ao inicializar o mapa:', error);
-        showError('Erro ao carregar o mapa. Por favor, recarregue a página.');
+        console.error('Erro ao inicializar mapa:', error);
+        showError('Erro ao carregar o mapa');
     }
 }
 
-// Configuração da busca
-function setupSearch() {
-    const searchInput = document.getElementById('addressSearch');
-    const searchResults = document.getElementById('searchResults');
-    let searchTimeout;
-
-    searchInput.addEventListener('input', function(e) {
-        clearTimeout(searchTimeout);
-        searchResults.innerHTML = '';
-        
-        if (e.target.value.length < 3) return;
-        
-        searchTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(e.target.value)}&countrycodes=br`);
-                if (!response.ok) throw new Error('Erro na busca');
-                
-                const data = await response.json();
-                
-                searchResults.innerHTML = data.slice(0, 5).map(result => `
-                    <div class="search-result-item" onclick="selectLocation(${result.lat}, ${result.lon}, '${result.display_name.replace(/'/g, "&apos;")}')">
-                        ${result.display_name}
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('Erro na busca:', error);
-                searchResults.innerHTML = '<div class="search-error">Erro ao buscar endereço</div>';
-            }
-        }, 500);
-    });
-
-    // Fechar resultados quando clicar fora
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.map-search-container')) {
-            searchResults.innerHTML = '';
-        }
-    });
+// Funções do Mapa
+function showInitialPopup() {
+    const initialPopup = L.popup()
+        .setLatLng([-15.7801, -47.9292])
+        .setContent(`
+            <div class="intro-popup">
+                <h3>Bem-vindo ao AgroDecision</h3>
+                <p>Selecione um local no mapa para começar a simulação</p>
+            </div>
+        `)
+        .openOn(map);
 }
 
-// Função para selecionar localização
-function selectLocation(lat, lon, displayName) {
-    const latlng = { lat: parseFloat(lat), lng: parseFloat(lon) };
-    
-    if (marker) {
-        marker.remove();
-    }
-    
-    marker = L.marker(latlng).addTo(map);
-    map.setView(latlng, 13);
-    
-    if (document.getElementById('searchResults')) {
-        document.getElementById('searchResults').innerHTML = '';
-    }
-    if (document.getElementById('addressSearch')) {
-        document.getElementById('addressSearch').value = displayName;
-    }
-    
-    saveLocation(latlng);
-    getNASAData(latlng.lat, latlng.lng);
+function setupMapHandlers() {
+    map.on('click', handleMapClick);
+    setupSearchBox();
 }
 
-// Configuração do clique no mapa
-function setupMapClickHandler() {
-    map.on('click', async function(e) {
-        try {
-            if (marker) {
-                marker.remove();
-            }
-            
-            marker = L.marker(e.latlng).addTo(map);
-            
-            const climateData = await getNASAData(e.latlng.lat, e.latlng.lng);
-            if (climateData) {
-                window.climateData = climateData;
-                saveLocation(e.latlng);
-            }
-        } catch (error) {
-            console.error('Erro ao processar clique no mapa:', error);
-            showError('Erro ao selecionar localização');
-        }
-    });
-}
-
-// Função para salvar localização
-function saveLocation(latlng) {
+async function handleMapClick(e) {
     try {
-        localStorage.setItem('selectedLocation', JSON.stringify({
-            lat: latlng.lat,
-            lng: latlng.lng,
-            timestamp: new Date().toISOString()
-        }));
-    } catch (error) {
-        console.error('Erro ao salvar localização:', error);
-    }
-}
-
-// Função para obter dados da NASA
-async function getNASAData(lat, lng) {
-    showLoadingAnimation();
-    try {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setFullYear(endDate.getFullYear() - 1);
+        if (marker) marker.remove();
+        marker = L.marker(e.latlng).addTo(map);
         
-        const formatDate = (date) => {
-            return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-        };
-
-        const params = new URLSearchParams({
-            parameters: 'T2M,PRECTOT,RH2M',
-            community: 'AG',
-            longitude: lng.toFixed(4),
-            latitude: lat.toFixed(4),
-            start: formatDate(startDate),
-            end: formatDate(endDate),
-            format: 'JSON'
-        });
-
-        const response = await fetch(`https://power.larc.nasa.gov/api/temporal/daily/point?${params}`);
-        if (!response.ok) throw new Error('Erro na requisição da API da NASA');
+        showLoadingAnimation();
+        const climateData = await getNASAData(e.latlng.lat, e.latlng.lng);
         
-        const data = await response.json();
-        window.climateData = data;
-        return data;
+        if (climateData) {
+            window.climateData = climateData;
+            saveLocation(e.latlng);
+            document.getElementById('locationWarning')?.style.display = 'none';
+        }
     } catch (error) {
-        console.error('Erro ao buscar dados da NASA:', error);
-        showError('Não foi possível carregar os dados climáticos');
-        return null;
+        console.error('Erro ao processar clique:', error);
+        showError('Erro ao selecionar localização');
     } finally {
         hideLoadingAnimation();
     }
 }
 
-// Funções de navegação
-function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    sidebar.classList.toggle('open');
+// Funções de Busca e Localização
+function setupSearchBox() {
+    const searchInput = document.getElementById('addressSearch');
+    const searchResults = document.getElementById('searchResults');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        if (e.target.value.length < 3) {
+            searchResults.innerHTML = '';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => performSearch(e.target.value, searchResults), 500);
+    });
 }
 
-function showScreen(screenName) {
-    const content = document.getElementById('content');
-    const map = document.getElementById('map');
-
-    if (screenName === 'home') {
-        content.style.display = 'none';
-        map.style.display = 'block';
-        if (map && window.map) {
-            window.map.invalidateSize();
-        }
-    } else {
-        content.style.display = 'block';
-        map.style.display = 'none';
+async function performSearch(query, resultsContainer) {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br`
+        );
         
-        // Limpar conteúdo anterior
-        content.innerHTML = '<div class="loading-spinner"></div>';
+        if (!response.ok) throw new Error('Erro na busca');
         
-        switch(screenName) {
-            case 'simulation':
-                loadSimulationScreen();
-                break;
-            case 'news':
-                loadNewsScreen();
-                break;
-            case 'history':
-                loadHistoryScreen();
-                break;
-        }
+        const data = await response.json();
+        
+        resultsContainer.innerHTML = data
+            .slice(0, 5)
+            .map(result => createSearchResultItem(result))
+            .join('');
+    } catch (error) {
+        console.error('Erro na busca:', error);
+        resultsContainer.innerHTML = '<div class="search-error">Erro ao buscar endereço</div>';
     }
-
-    // Atualizar URL sem recarregar a página
-    window.history.pushState({}, '', `#${screenName}`);
-    toggleSidebar();
 }
 
-// Funções de simulação
+// Funções de Clima e NASA API
+async function getNASAData(lat, lng) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(endDate.getFullYear() - 1);
+    
+    const formatDate = (date) => {
+        return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    const params = new URLSearchParams({
+        parameters: 'T2M,PRECTOT,RH2M',
+        community: 'AG',
+        longitude: lng.toFixed(4),
+        latitude: lat.toFixed(4),
+        start: formatDate(startDate),
+        end: formatDate(endDate),
+        format: 'JSON'
+    });
+
+    try {
+        const response = await fetch(`https://power.larc.nasa.gov/api/temporal/daily/point?${params}`);
+        if (!response.ok) throw new Error('Erro na requisição da API da NASA');
+        return await response.json();
+    } catch (error) {
+        console.error('Erro ao buscar dados da NASA:', error);
+        showError('Falha ao obter dados climáticos');
+        return null;
+    }
+}
+
+// Funções de Simulação
 function loadSimulationScreen() {
     const content = document.getElementById('content');
     const hasLocation = window.climateData !== undefined;
@@ -277,30 +154,33 @@ function loadSimulationScreen() {
     content.innerHTML = `
         <div class="simulation-container">
             <h2>Simulação de Colheita</h2>
+            
             <div class="location-warning" id="locationWarning" style="display: ${hasLocation ? 'none' : 'flex'}">
                 <p>⚠️ Selecione uma localização no mapa antes de simular</p>
             </div>
+            
             <form id="simulationForm" onsubmit="handleSimulation(event)">
                 <div class="form-grid">
                     <div class="input-group">
                         <label for="crop">Cultura</label>
                         <select class="modern-input" id="crop" required>
                             <option value="">Selecione a cultura</option>
+                            ${generateCropOptions()}
                         </select>
                     </div>
 
                     <div class="input-group">
                         <label for="area">Área (hectares)</label>
-                        <input type="number" class="modern-input" id="area" required min="0.1" step="0.1">
+                        <input type="number" class="modern-input" id="area" 
+                               required min="0.1" step="0.1" value="1.0">
                     </div>
 
                     <div class="input-group">
                         <label for="irrigation">Sistema de Irrigação</label>
                         <select class="modern-input" id="irrigation" required>
                             <option value="">Selecione o sistema</option>
-                            <option value="cerqueiro">Cerqueiro (Baseado em dados climáticos)</option>
+                            <option value="cerqueiro">Sistema Cerqueiro (Climático)</option>
                         </select>
-                        <small class="input-help">Sistema cerqueiro utiliza dados climáticos da NASA para otimizar a irrigação</small>
                     </div>
 
                     <div class="input-group">
@@ -328,716 +208,859 @@ function loadSimulationScreen() {
         </div>
     `;
 
-    // Preencher o select de culturas
-    const cropSelect = document.getElementById('crop');
-    if (cropSelect) {
-        const crops = Object.keys(baseYield).sort((a, b) => getCropName(a).localeCompare(getCropName(b)));
-        cropSelect.innerHTML = `
-            <option value="">Selecione a cultura</option>
-            ${crops.map(crop => `<option value="${crop}">${getCropName(crop)}</option>`).join('')}
-        `;
-    }
-
-    // Definir data mínima como hoje
+    // Configurar data mínima como hoje
     const plantingDateInput = document.getElementById('plantingDate');
-    if (plantingDateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        plantingDateInput.min = today;
-        plantingDateInput.value = today;
-    }
+    const today = new Date().toISOString().split('T')[0];
+    plantingDateInput.min = today;
+    plantingDateInput.value = today;
 }
 
-async function handleSimulation(event) {
-    event.preventDefault();
-    
-    try {
-        // Verificar se uma localização foi selecionada
-        if (!window.climateData) {
-            const warningElement = document.getElementById('locationWarning');
-            if (warningElement) {
-                warningElement.style.display = 'flex';
-                warningElement.scrollIntoView({ behavior: 'smooth' });
-            }
-            return;
-        }
-
-        // Mostrar animação de carregamento
-        showLoadingAnimation();
-
-        const form = event.target;
-        const data = {
-            crop: form.crop.value,
-            area: parseFloat(form.area.value),
-            irrigation: form.irrigation.value,
-            soil: form.soil.value,
-            plantingDate: form.plantingDate.value
-        };
-
-        // Validar dados
-        if (!data.crop || !data.area || !data.irrigation || !data.soil || !data.plantingDate) {throw new Error('Todos os campos são obrigatórios');
-        }
-
-        // Validar área mínima
-        if (data.area < 0.1) {
-            throw new Error('A área mínima é de 0.1 hectares');
-        }
-
-        // Simular processamento
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const results = calculateCropMetrics(data);
-        
-        if (!results) {
-            throw new Error('Erro ao calcular métricas da cultura');
-        }
-
-        // Salvar no histórico
-        await saveToHistory({
-            ...data,
-            results,
-            timestamp: new Date().toISOString()
-        });
-
-        // Mostrar resultados
-        const resultsContainer = document.getElementById('simulationResults');
-        if (resultsContainer) {
-            showSimulationResults(results, data);
-            resultsContainer.scrollIntoView({ behavior: 'smooth' });
-        }
-
-    } catch (error) {
-        console.error('Erro na simulação:', error);
-        showError(error.message || 'Erro ao processar a simulação');
-    } finally {
-        hideLoadingAnimation();
-    }
-}
-
-// Funções de Loading
-function showLoadingAnimation() {
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) {
-        loading.style.display = 'flex';
-    } else {
-        const loadingElement = document.createElement('div');
-        loadingElement.id = 'loadingOverlay';
-        loadingElement.className = 'loading-overlay';
-        loadingElement.innerHTML = `
-            <div class="loading-spinner"></div>
-            <p>Calculando resultados...</p>
-        `;
-        document.body.appendChild(loadingElement);
-    }
-}
-
-function hideLoadingAnimation() {
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) {
-        loading.style.display = 'none';
-    }
-}
-
-// Cálculo de métricas da cultura
-function calculateCropMetrics(data) {
-    try {
-        // Validar dados de entrada
-        if (!data || !data.crop || !data.area || !data.irrigation || !data.soil || !data.plantingDate) {
-            console.error('Dados de entrada inválidos para cálculo de métricas');
-            return null;
-        }
-
-        // Verificar se a cultura é suportada
-        if (!baseYield[data.crop]) {
-            console.error('Cultura não suportada:', data.crop);
-            return null;
-        }
-
-        // Fatores de eficiência de irrigação
-        const irrigationEfficiency = {
-            cerqueiro: calculateIrrigationEfficiency(window.climateData)
-        };
-
-        // Verificar sistema de irrigação
-        if (!irrigationEfficiency[data.irrigation]) {
-            console.error('Sistema de irrigação não suportado:', data.irrigation);
-            return null;
-        }
-
-        // Fatores de qualidade do solo
-        const soilQuality = {
-            clay: 1.1,  // Solo argiloso
-            sandy: 0.8, // Solo arenoso
-            loam: 1.3   // Solo franco
-        };
-
-        // Verificar tipo de solo
-        if (!soilQuality[data.soil]) {
-            console.error('Tipo de solo não suportado:', data.soil);
-            return null;
-        }
-
-        // Cálculo da produtividade
-        const yieldPerHectare = baseYield[data.crop] * 
-            irrigationEfficiency[data.irrigation] * 
-            soilQuality[data.soil];
-        
-        const validArea = Math.max(0.1, Number(data.area));
-        const totalYield = yieldPerHectare * validArea;
-
-        // Necessidade hídrica base (mm)
-        const waterUsage = {
-            soybean: 550,     // Soja
-            corn: 700,        // Milho
-            wheat: 450,       // Trigo
-            cotton: 800,      // Algodão
-            rice: 1200,       // Arroz
-            beans: 400,       // Feijão
-            cassava: 800,     // Mandioca
-            potato: 500,      // Batata
-            sugarcane: 1500,  // Cana-de-açúcar
-            coffee: 1600,     // Café
-            orange: 900,      // Laranja
-            grape: 700,       // Uva
-            apple: 800,       // Maçã
-            banana: 1800,     // Banana
-            mango: 1000,      // Manga
-            papaya: 1600,     // Mamão
-            pineapple: 1200,  // Abacaxi
-            watermelon: 500,  // Melancia
-            melon: 450,       // Melão
-            tomato: 600,      // Tomate
-            onion: 450,       // Cebola
-            carrot: 400,      // Cenoura
-            lettuce: 250,     // Alface
-            cabbage: 380,     // Repolho
-            pepper: 600,      // Pimentão
-            cucumber: 450,    // Pepino
-            garlic: 350,      // Alho
-            peanut: 500,      // Amendoim
-            sunflower: 600,   // Girassol
-            tobacco: 500,     // Tabaco
-            eucalyptus: 1200, // Eucalipto
-            pine: 1000,       // Pinus
-            rubber: 1500,     // Seringueira
-            palm: 1300,       // Palmeira
-            coconut: 1300,    // Coco
-            avocado: 900,     // Abacate
-            lemon: 900,       // Limão
-            tangerine: 900,   // Tangerina
-            passion_fruit: 800, // Maracujá
-            guava: 800,       // Goiaba
-            fig: 700,         // Figo
-            peach: 750,       // Pêssego
-            plum: 700,        // Ameixa
-            pear: 750,        // Pera
-            strawberry: 500,  // Morango
-            blackberry: 600,  // Amora
-            raspberry: 600,   // Framboesa
-            blueberry: 550,   // Mirtilo
-            acai: 1200,       // Açaí
-            cashew: 800       // Caju
-        };
-
-        // Calcular necessidade hídrica
-        const waterEfficiency = Math.max(0.1, irrigationEfficiency[data.irrigation]);
-        const waterRequired = validArea * waterUsage[data.crop] * (1 / waterEfficiency);
-
-        // Ciclo da cultura (dias)
-        const cycles = {
-            soybean: 120,     // Soja
-            corn: 135,        // Milho
-            wheat: 110,       // Trigo
-            cotton: 170,      // Algodão
-            rice: 120,        // Arroz
-            beans: 90,        // Feijão
-            cassava: 300,     // Mandioca
-            potato: 100,      // Batata
-            sugarcane: 365,   // Cana-de-açúcar
-            coffee: 730,      // Café
-            orange: 240,      // Laranja
-            grape: 150,       // Uva
-            apple: 180,       // Maçã
-            banana: 300,      // Banana
-            mango: 150,       // Manga
-            papaya: 240,      // Mamão
-            pineapple: 450,   // Abacaxi
-            watermelon: 90,   // Melancia
-            melon: 80,        // Melão
-            tomato: 120,      // Tomate
-            onion: 120,       // Cebola
-            carrot: 100,      // Cenoura
-            lettuce: 45,      // Alface
-            cabbage: 90,      // Repolho
-            pepper: 120,      // Pimentão
-            cucumber: 60,     // Pepino
-            garlic: 150,      // Alho
-            peanut: 120,      // Amendoim
-            sunflower: 120,   // Girassol
-            tobacco: 180,     // Tabaco
-            eucalyptus: 2190, // Eucalipto
-            pine: 2555,       // Pinus
-            rubber: 2190,     // Seringueira
-            palm: 1095,       // Palmeira
-            coconut: 1825,    // Coco
-            avocado: 1095,    // Abacate
-            lemon: 365,       // Limão
-            tangerine: 365,   // Tangerina
-            passion_fruit: 270, // Maracujá
-            guava: 365,       // Goiaba
-            fig: 365,         // Figo
-            peach: 180,       // Pêssego
-            plum: 180,        // Ameixa
-            pear: 180,        // Pera
-            strawberry: 90,   // Morango
-            blackberry: 120,  // Amora
-            raspberry: 120,   // Framboesa
-            blueberry: 120,   // Mirtilo
-            acai: 1460,       // Açaí
-            cashew: 730       // Caju
-        };
-
-        // Calcular data de colheita
-        let harvestDate = new Date(data.plantingDate);
-        harvestDate.setDate(harvestDate.getDate() + cycles[data.crop]);
-
-        // Cálculos detalhados
-        const calculations = {
-            yieldCalc: {
-                baseYield: baseYield[data.crop],
-                irrigationFactor: irrigationEfficiency[data.irrigation],
-                soilFactor: soilQuality[data.soil],
-                area: validArea
-            },
-            waterCalc: {
-                baseUsage: waterUsage[data.crop],
-                irrigationFactor: irrigationEfficiency[data.irrigation],
-                area: validArea
-            },
-            cycleCalc: {
-                duration: cycles[data.crop],
-                plantingDate: data.plantingDate
-            }
-        };
-
-        return {
-            yield: totalYield.toFixed(2),
-            water: waterRequired.toFixed(2),
-            cycle: cycles[data.crop],
-            harvestDate: harvestDate.toISOString().split('T')[0],
-            calculations
-        };
-
-    } catch (error) {
-        console.error('Erro ao calcular métricas:', error);
-        return null;
-    }
-}
-
-// Função para calcular eficiência de irrigação
-function calculateIrrigationEfficiency(climateData) {
-    if (!climateData || !climateData.properties || !climateData.properties.parameter) {
-        return 0.7; // Eficiência padrão
-    }
-
-    try {
-        const data = climateData.properties.parameter;
-        const temp = data.T2M;
-        const precip = data.PRECTOT;
-        const humidity = data.RH2M;
-
-        // Calcular médias
-        const calcAverage = (values) => {
-            const nums = Object.values(values).filter(v => typeof v === 'number' && !isNaN(v));
-            return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
-        };
-
-        const avgTemp = calcAverage(temp);
-        const avgPrecip = calcAverage(precip);
-        const avgHumidity = calcAverage(humidity);
-
-        if (avgTemp === null || avgPrecip === null || avgHumidity === null) {
-            return 0.7;
-        }
-
-        // Função sigmoide
-        const sigmoid = (x, center, steepness) => 1 / (1 + Math.exp(-steepness * (x - center)));
-
-        // Fatores de eficiência
-        const tempEff = sigmoid(avgTemp, 25, 0.2) * (avgTemp <= 35 ? 1 : Math.exp(-(avgTemp - 35) / 5));
-        const precipEff = Math.exp(-Math.pow(avgPrecip - 50, 2) / 5000);
-        const humidityEff = sigmoid(avgHumidity, 65, 0.1);
-
-        // Calcular eficiência final
-        const efficiency = (tempEff * 0.4 + precipEff * 0.3 + humidityEff * 0.3);
-
-        return Math.min(0.95, Math.max(0.4, efficiency));
-    } catch (error) {
-        console.error('Erro ao calcular eficiência de irrigação:', error);
-        return 0.7;
-    }
-}
-
-// Função para exibir resultados
-function showSimulationResults(results, inputData) {
-    const resultsContainer = document.getElementById('simulationResults');
-    if (!resultsContainer) return;
-
-    const probabilities = calculateProbabilities(window.climateData, inputData);
-    
-    resultsContainer.innerHTML = `
-        <h3>Resultados da Simulação</h3>
-        <div class="results-grid">
-            <div class="result-card" onclick="showCalculationDetails('yield', ${JSON.stringify(results)}, ${JSON.stringify(inputData)})">
-                <div class="result-icon">📊</div>
-                <h4>Produtividade Estimada</h4>
-                <div class="result-value">${results.yield} ton</div>
-                <div class="result-probability">Probabilidade de Sucesso: ${probabilities.yield}%</div>
-                <small>Clique para ver os cálculos</small>
-            </div>
-
-            <div class="result-card" onclick="showCalculationDetails('water', ${JSON.stringify(results)}, ${JSON.stringify(inputData)})">
-                <div class="result-icon">💧</div>
-                <h4>Necessidade Hídrica</h4>
-                <div class="result-value">${results.water} mm</div>
-                <div class="result-probability">Probabilidade de Disponibilidade: ${probabilities.water}%</div>
-                <small>Clique para ver os cálculos</small>
-            </div>
-
-            <div class="result-card" onclick="showCalculationDetails('cycle', ${JSON.stringify(results)}, ${JSON.stringify(inputData)})">
-                <div class="result-icon">📅</div>
-                <h4>Ciclo e Colheita</h4>
-                <div class="result-value">${results.cycle} dias</div>
-                <div class="result-subvalue">Colheita prevista: ${formatarData(results.harvestDate)}</div>
-                <div class="result-probability">Condições Climáticas Favoráveis: ${probabilities.climate}%</div>
-                <small>Clique para ver os cálculos</small>
-            </div>
-        </div>
-    `;
-}
-// Calcular probabilidades
-function calculateProbabilities(climateData, inputData) {
-    if (!climateData || !climateData.properties || !climateData.properties.parameter) {
-        return {
-            yield: 50,
-            water: 50,
-            climate: 50
-        };
-    }
-
-    try {
-        const data = climateData.properties.parameter;
-        const temp = data.T2M;
-        const precip = data.PRECTOT;
-        const humidity = data.RH2M;
-
-        // Calcular médias
-        const avgTemp = Object.values(temp).reduce((a, b) => a + b, 0) / Object.keys(temp).length;
-        const avgPrecip = Object.values(precip).reduce((a, b) => a + b, 0) / Object.keys(precip).length;
-        const avgHumidity = Object.values(humidity).reduce((a, b) => a + b, 0) / Object.keys(humidity).length;
-
-        const yieldProb = calculateYieldProbability(avgTemp, avgPrecip, avgHumidity, inputData.crop);
-        const waterProb = calculateWaterProbability(avgPrecip, inputData.crop);
-        const climateProb = calculateClimateProbability(avgTemp, avgHumidity, inputData.crop);
-
-        return {
-            yield: Math.round(yieldProb * 100),
-            water: Math.round(waterProb * 100),
-            climate: Math.round(climateProb * 100)
-        };
-    } catch (error) {
-        console.error('Erro ao calcular probabilidades:', error);
-        return {
-            yield: 50,
-            water: 50,
-            climate: 50
-        };
-    }
-}
-
-// Função para probabilidade de produtividade
-function calculateYieldProbability(temp, precip, humidity, crop) {
-    const idealConditions = {
-        soybean: { temp: [20, 30], precip: [450, 700], humidity: [60, 80] },
-        corn: { temp: [22, 32], precip: [500, 800], humidity: [55, 75] },
-        wheat: { temp: [15, 25], precip: [350, 450], humidity: [50, 70] },
-        cotton: { temp: [23, 33], precip: [600, 800], humidity: [55, 75] },
-        rice: { temp: [20, 30], precip: [800, 1200], humidity: [65, 85] },
-        // ... (continua com todas as culturas)
-    };
-
-    if (!idealConditions[crop]) return 0.5;
-
-    const gaussian = (x, min, max) => {
-        const mean = (min + max) / 2;
-        const std = (max - min) / 4;
-        return Math.exp(-Math.pow(x - mean, 2) / (2 * Math.pow(std, 2)));
-    };
-
-    const tempProb = gaussian(temp, ...idealConditions[crop].temp);
-    const precipProb = gaussian(precip, ...idealConditions[crop].precip);
-    const humidityProb = gaussian(humidity, ...idealConditions[crop].humidity);
-
-    const weightedProb = (tempProb * 0.4) + (precipProb * 0.35) + (humidityProb * 0.25);
-
-    return Math.min(0.95, Math.max(0.05, weightedProb));
-}
-
-// Função para probabilidade de disponibilidade hídrica
-function calculateWaterProbability(precip, crop) {
-    const waterRequirements = {
-        soybean: { min: 450, optimal: 550, max: 800 },
-        corn: { min: 500, optimal: 650, max: 900 },
-        wheat: { min: 350, optimal: 450, max: 600 },
-        cotton: { min: 600, optimal: 750, max: 1000 },
-        rice: { min: 1000, optimal: 1200, max: 1500 },
-        // ... (continua com todas as culturas)
-    };
-
-    if (!waterRequirements[crop]) return 0.5;
-
-    const req = waterRequirements[crop];
-    
-    const calcProb = (x, min, optimal, max) => {
-        if (x < min) return Math.max(0.05, x / min);
-        if (x > max) return Math.max(0.05, 1 - (x - max) / max);
-        
-        const leftSide = x <= optimal;
-        const reference = leftSide ? min : max;
-        const target = optimal;
-        const value = leftSide ? x : max - (x - optimal);
-        const range = Math.abs(target - reference);
-        
-        return Math.min(0.95, 0.5 + (value / range) * 0.45);
-    };
-
-    return calcProb(precip, req.min, req.optimal, req.max);
-}
-
-// Função para probabilidade climática
-function calculateClimateProbability(temp, humidity, crop) {
-    const idealConditions = {
-        soybean: { temp: { min: 20, optimal: 25, max: 30 }, humidity: { min: 60, optimal: 70, max: 80 } },
-        corn: { temp: { min: 22, optimal: 27, max: 32 }, humidity: { min: 55, optimal: 65, max: 75 } },
-        wheat: { temp: { min: 15, optimal: 20, max: 25 }, humidity: { min: 50, optimal: 60, max: 70 } },
-        // ... (continua com todas as culturas)
-    };
-
-    if (!idealConditions[crop]) return 0.5;
-
-    const ideal = idealConditions[crop];
-
-    const sigmoid = (x, min, optimal, max) => {
-        if (x < min) return Math.exp(-Math.pow(min - x, 2) / (2 * Math.pow(min - optimal, 2)));
-        if (x > max) return Math.exp(-Math.pow(x - max, 2) / (2 * Math.pow(max - optimal, 2)));
-        return 1;
-    };
-
-    const tempProb = sigmoid(temp, ideal.temp.min, ideal.temp.optimal, ideal.temp.max);
-    const humidityProb = sigmoid(humidity, ideal.humidity.min, ideal.humidity.optimal, ideal.humidity.max);
-
-    const combinedProb = (tempProb * 0.6) + (humidityProb * 0.4);
-
-    return Math.min(0.95, Math.max(0.05, combinedProb));
-}
-
-// Função para mostrar detalhes dos cálculos
-function showCalculationDetails(type, results, inputData) {
-    let title, content;
-
-    switch(type) {
-        case 'yield':
-            title = 'Cálculo da Produtividade';
-            content = `
-                <div class="calculation-step">
-                    <p><strong>Produtividade Base:</strong> ${results.calculations.yieldCalc.baseYield} ton/ha</p>
-                    <p><strong>Fator de Irrigação:</strong> ${results.calculations.yieldCalc.irrigationFactor.toFixed(2)}</p>
-                    <p><strong>Fator do Solo:</strong> ${results.calculations.yieldCalc.soilFactor}</p>
-                    <p><strong>Área:</strong> ${results.calculations.yieldCalc.area} ha</p>
-                    <hr>
-                    <p><strong>Cálculo:</strong></p>
-                    <p>${results.calculations.yieldCalc.baseYield} × ${results.calculations.yieldCalc.irrigationFactor.toFixed(2)} × ${results.calculations.yieldCalc.soilFactor} × ${results.calculations.yieldCalc.area} = ${results.yield} ton</p>
-                </div>
-            `;
-            break;
-        case 'water':
-            title = 'Cálculo da Necessidade Hídrica';
-            content = `
-                <div class="calculation-step">
-                    <p><strong>Necessidade Base:</strong> ${results.calculations.waterCalc.baseUsage} mm</p>
-                    <p><strong>Fator de Irrigação:</strong> ${results.calculations.waterCalc.irrigationFactor.toFixed(2)}</p>
-                    <p><strong>Área:</strong> ${results.calculations.waterCalc.area} ha</p>
-                    <hr>
-                    <p><strong>Cálculo:</strong></p>
-                    <p>${results.calculations.waterCalc.baseUsage} × ${results.calculations.waterCalc.area} ÷ ${results.calculations.waterCalc.irrigationFactor.toFixed(2)} = ${results.water} mm</p>
-                </div>
-            `;
-            break;
-        case 'cycle':
-            title = 'Cálculo do Ciclo e Data de Colheita';
-            content = `
-                <div class="calculation-step">
-                    <p><strong>Duração do Ciclo:</strong> ${results.calculations.cycleCalc.duration} dias</p>
-                    <p><strong>Data de Plantio:</strong> ${formatarData(results.calculations.cycleCalc.plantingDate)}</p>
-                    <p><strong>Data de Colheita:</strong> ${formatarData(results.harvestDate)}</p>
-                    <hr>
-                    <p><strong>Cálculo:</strong></p>
-                    <p>Data de Plantio + ${results.calculations.cycleCalc.duration} dias = ${formatarData(results.harvestDate)}</p>
-                </div>
-            `;
-            break;
-    }
-
-    Swal.fire({
-        title: title,
-        html: content,
-        confirmButtonText: 'Fechar',
-        confirmButtonColor: '#4CAF50',
-        width: '600px'
-    });
-}
-
-// Funções de histórico
-async function saveToHistory(simulation) {
-    try {
-        const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
-        history.unshift({
-            id: Date.now(),
-            ...simulation
-        });
-        localStorage.setItem('simulationHistory', JSON.stringify(history.slice(0, 50)));
-    } catch (error) {
-        console.error('Erro ao salvar no histórico:', error);
-        showError('Não foi possível salvar no histórico');
-    }
-}
-
-function loadHistoryScreen() {
-    const content = document.getElementById('content');
-    try {
-        const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
-
-        if (history.length === 0) {
-            content.innerHTML = `
-                <div class="history-container">
-                    <h2>Histórico de Simulações</h2>
-                    <p class="empty-history">Nenhuma simulação encontrada</p>
-                </div>
-            `;
-            return;
-        }
-
-        content.innerHTML = `
-            <div class="history-container">
-                <h2>Histórico de Simulações</h2>
-                <div class="history-grid">
-                    ${history.map(sim => `
-                        <div class="history-card">
-                            <div class="history-header">
-                                <span>${getCropName(sim.crop)}</span>
-                                <span>${formatarData(sim.timestamp)}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span>Área:</span>
-                                <span>${sim.area} hectares</span>
-                            </div>
-                            <div class="detail-row">
-                                <span>Produtividade:</span>
-                                <span>${sim.results.yield} ton</span>
-                            </div>
-                            <div class="detail-row">
-                                <span>Data do Plantio:</span>
-                                <span>${formatarData(sim.plantingDate)}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span>Data da Colheita:</span>
-                                <span>${formatarData(sim.results.harvestDate)}</span>
-                            </div>
-                            <button 
-                                onclick='showCalculationDetails("complete", ${JSON.stringify(sim.results)}, ${JSON.stringify(sim)})'
-                                class="modern-button"
-                            >
-                                Ver Detalhes
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error('Erro ao carregar histórico:', error);
-        content.innerHTML = `
-            <div class="history-container">
-                <h2>Histórico de Simulações</h2>
-                <p class="error-message">Erro ao carregar histórico</p>
-            </div>
-        `;
-    }
-}
-
-// Funções utilitárias
-function formatarData(data) {
-    try {
-        return new Date(data).toLocaleDateString('pt-BR');
-    } catch (error) {
-        console.error('Erro ao formatar data:', error);
-        return data;
-    }
-}
-
-function getCropName(crop) {
-    const names = {
+// Função para gerar opções de culturas
+function generateCropOptions() {
+    const cropNames = {
         soybean: 'Soja',
         corn: 'Milho',
         wheat: 'Trigo',
         cotton: 'Algodão',
         rice: 'Arroz',
-        beans: 'Feijão',
-        cassava: 'Mandioca',
-        potato: 'Batata',
-        sugarcane: 'Cana-de-açúcar',
-        coffee: 'Café',
-        orange: 'Laranja',
-        grape: 'Uva',
-        apple: 'Maçã',
-        banana: 'Banana',
-        mango: 'Manga',
-        papaya: 'Mamão',
-        pineapple: 'Abacaxi',
-        watermelon: 'Melancia',
-        melon: 'Melão',
-        tomato: 'Tomate',
-        onion: 'Cebola',
-        carrot: 'Cenoura',
-        lettuce: 'Alface',
-        cabbage: 'Repolho',
-        pepper: 'Pimentão',
-        cucumber: 'Pepino',
-        garlic: 'Alho',
-        peanut: 'Amendoim',
-        sunflower: 'Girassol',
-        tobacco: 'Tabaco',
-        eucalyptus: 'Eucalipto',
-        pine: 'Pinus',
-        rubber: 'Seringueira',
-        palm: 'Palmeira',
-        coconut: 'Coco',
-        avocado: 'Abacate',
-        lemon: 'Limão',
-        tangerine: 'Tangerina',
-        passion_fruit: 'Maracujá',
-        guava: 'Goiaba',
-        fig: 'Figo',
-        peach: 'Pêssego',
-        plum: 'Ameixa',
-        pear: 'Pera',
-        strawberry: 'Morango',
-        blackberry: 'Amora',
-        raspberry: 'Framboesa',
-        blueberry: 'Mirtilo',
-        acai: 'Açaí',
-        cashew: 'Caju'
+        // ... adicione mais culturas conforme necessário
     };
-    return names[crop] || crop;
+
+    return Object.entries(cropNames)
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([value, name]) => `<option value="${value}">${name}</option>`)
+        .join('');
+}
+
+// Função para manipular a simulação
+async function handleSimulation(event) {
+    event.preventDefault();
+    showLoadingAnimation();
+
+    try {
+        if (!window.climateData) {
+            document.getElementById('locationWarning').style.display = 'flex';
+            return;
+        }
+
+        const formData = getFormData();
+        validateFormData(formData);
+
+        // Calcular resultados base
+        const baseResults = calculateCropMetrics(formData);
+
+        // Calcular probabilidades para diferentes datas
+        const harvestProbabilities = await calculateHarvestProbabilities(
+            formData,
+            new Date(baseResults.harvestDate)
+        );
+
+        // Exibir resultados
+        showSimulationResults(baseResults, harvestProbabilities);
+
+        // Salvar no histórico
+        await saveToHistory({
+            ...formData,
+            results: baseResults,
+            probabilities: harvestProbabilities,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Erro na simulação:', error);
+        showError(error.message || 'Erro ao processar simulação');
+    } finally {
+        hideLoadingAnimation();
+    }
+}
+// Carregamento de Notícias
+async function loadNewsScreen() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="news-container">
+            <h2>Notícias Agrícolas</h2>
+            <div id="newsCarousel" class="news-carousel">
+                <div id="newsContent" class="news-grid"></div>
+                <div class="carousel-controls">
+                    <button id="prevPage" class="carousel-button">❮</button>
+                    <div id="pageIndicators" class="page-indicators"></div>
+                    <button id="nextPage" class="carousel-button">❯</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    showLoadingAnimation();
+    try {
+        const news = await fetchAgriculturalNews();
+        setupNewsCarousel(news);
+    } catch (error) {
+        console.error('Erro ao carregar notícias:', error);
+        showError('Não foi possível carregar as notícias');
+    } finally {
+        hideLoadingAnimation();
+    }
+}
+
+async function fetchAgriculturalNews() {
+    const response = await fetch(
+        `https://gnews.io/api/v4/search?q=agricultura+brasil&lang=pt&country=br&max=20&apikey=${GNEWS_API_KEY}`
+    );
+    
+    if (!response.ok) throw new Error('Falha ao buscar notícias');
+    
+    const data = await response.json();
+    return data.articles || [];
+}
+
+function setupNewsCarousel(news) {
+    const itemsPerPage = 4;
+    let currentPage = 0;
+    const totalPages = Math.ceil(news.length / itemsPerPage);
+
+    const content = document.getElementById('newsContent');
+    const indicators = document.getElementById('pageIndicators');
+    const prevButton = document.getElementById('prevPage');
+    const nextButton = document.getElementById('nextPage');
+
+    function updateCarousel() {
+        // Atualizar notícias
+        const start = currentPage * itemsPerPage;
+        const currentNews = news.slice(start, start + itemsPerPage);
+
+        content.innerHTML = currentNews.map(item => `
+            <div class="news-card">
+                ${item.image ? `
+                    <div class="news-image" style="background-image: url('${item.image}')"></div>
+                ` : ''}
+                <div class="news-content">
+                    <div class="news-date">${formatarData(item.publishedAt)}</div>
+                    <h3>${item.title}</h3>
+                    <p>${item.description}</p>
+                    <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="news-link">
+                        Ler mais
+                    </a>
+                </div>
+            </div>
+        `).join('');
+
+        // Atualizar indicadores
+        indicators.innerHTML = Array.from({ length: totalPages }).map((_, index) => `
+            <button class="page-indicator ${index === currentPage ? 'active' : ''}" 
+                    onclick="changePage(${index})">
+            </button>
+        `).join('');
+
+        // Atualizar estado dos botões
+        prevButton.disabled = currentPage === 0;
+        nextButton.disabled = currentPage === totalPages - 1;
+    }
+
+    // Funções de navegação
+    window.changePage = (page) => {
+        currentPage = page;
+        updateCarousel();
+    };
+
+    prevButton.onclick = () => {
+        if (currentPage > 0) {
+            currentPage--;
+            updateCarousel();
+        }
+    };
+
+    nextButton.onclick = () => {
+        if (currentPage < totalPages - 1) {
+            currentPage++;
+            updateCarousel();
+        }
+    };
+
+    // Inicializar carrossel
+    updateCarousel();
+}
+
+// Cálculo de Probabilidades
+async function calculateHarvestProbabilities(formData, baseHarvestDate) {
+    const probabilities = [];
+    const daysRange = 3; // +/- 3 dias
+
+    for (let i = -daysRange; i <= daysRange; i++) {
+        const currentDate = new Date(baseHarvestDate);
+        currentDate.setDate(currentDate.getDate() + i);
+        
+        const dateConditions = await analyzeHistoricalConditions(
+            currentDate,
+            formData.crop,
+            window.climateData
+        );
+
+        probabilities.push({
+            date: currentDate.toISOString().split('T')[0],
+            probability: calculateProbabilityScore(dateConditions, formData.crop),
+            conditions: dateConditions
+        });
+    }
+
+    return probabilities;
+}
+
+async function analyzeHistoricalConditions(date, crop, climateData) {
+    const month = date.getMonth();
+    const historicalData = getHistoricalDataForMonth(month, climateData);
+    
+    return {
+        temperature: analyzeTemperature(historicalData.temperature, crop),
+        precipitation: analyzePrecipitation(historicalData.precipitation, crop),
+        humidity: analyzeHumidity(historicalData.humidity, crop),
+        soilMoisture: calculateSoilMoisture(historicalData)
+    };
+}
+
+function calculateProbabilityScore(conditions, crop) {
+    const weights = {
+        temperature: 0.3,
+        precipitation: 0.3,
+        humidity: 0.2,
+        soilMoisture: 0.2
+    };
+
+    const scores = {
+        temperature: getTemperatureScore(conditions.temperature, crop),
+        precipitation: getPrecipitationScore(conditions.precipitation, crop),
+        humidity: getHumidityScore(conditions.humidity, crop),
+        soilMoisture: getSoilMoistureScore(conditions.soilMoisture, crop)
+    };
+
+    return Object.entries(weights).reduce((total, [factor, weight]) => {
+        return total + (scores[factor] * weight);
+    }, 0);
+}
+// Funções de Análise Climática
+function getHistoricalDataForMonth(month, climateData) {
+    if (!climateData?.properties?.parameter) {
+        throw new Error('Dados climáticos inválidos');
+    }
+
+    const data = climateData.properties.parameter;
+    const monthData = {
+        temperature: [],
+        precipitation: [],
+        humidity: []
+    };
+
+    // Coletar dados históricos para o mês específico
+    Object.keys(data.T2M).forEach(date => {
+        const currentMonth = new Date(date).getMonth();
+        if (currentMonth === month) {
+            monthData.temperature.push(data.T2M[date]);
+            monthData.precipitation.push(data.PRECTOT[date]);
+            monthData.humidity.push(data.RH2M[date]);
+        }
+    });
+
+    return monthData;
+}
+
+function analyzeTemperature(temperatures, crop) {
+    const idealTemps = getIdealTemperatures(crop);
+    const avgTemp = calculateAverage(temperatures);
+    
+    return {
+        value: avgTemp,
+        status: getTemperatureStatus(avgTemp, idealTemps),
+        min: Math.min(...temperatures),
+        max: Math.max(...temperatures)
+    };
+}
+
+function analyzePrecipitation(precipitation, crop) {
+    const idealPrecip = getIdealPrecipitation(crop);
+    const totalPrecip = precipitation.reduce((sum, val) => sum + val, 0);
+    
+    return {
+        value: totalPrecip,
+        status: getPrecipitationStatus(totalPrecip, idealPrecip),
+        distribution: calculatePrecipitationDistribution(precipitation)
+    };
+}
+
+function analyzeHumidity(humidity, crop) {
+    const idealHumidity = getIdealHumidity(crop);
+    const avgHumidity = calculateAverage(humidity);
+    
+    return {
+        value: avgHumidity,
+        status: getHumidityStatus(avgHumidity, idealHumidity),
+        variation: calculateHumidityVariation(humidity)
+    };
+}
+
+function calculateSoilMoisture(historicalData) {
+    const { precipitation, temperature, humidity } = historicalData;
+    
+    // Modelo simplificado de umidade do solo
+    const evapotranspiration = calculateEvapotranspiration(temperature, humidity);
+    const totalPrecipitation = precipitation.reduce((sum, val) => sum + val, 0);
+    
+    return {
+        value: totalPrecipitation - evapotranspiration,
+        status: getSoilMoistureStatus(totalPrecipitation, evapotranspiration)
+    };
+}
+
+// Funções de Cálculo de Status
+function getTemperatureStatus(avg, ideal) {
+    if (avg >= ideal.min && avg <= ideal.max) return 'Ideal';
+    if (avg < ideal.min) return 'Abaixo do ideal';
+    return 'Acima do ideal';
+}
+
+function getPrecipitationStatus(total, ideal) {
+    const tolerance = 0.2; // 20% de tolerância
+    const min = ideal * (1 - tolerance);
+    const max = ideal * (1 + tolerance);
+    
+    if (total >= min && total <= max) return 'Ideal';
+    if (total < min) return 'Insuficiente';
+    return 'Excessiva';
+}
+
+function getHumidityStatus(avg, ideal) {
+    const tolerance = 0.1; // 10% de tolerância
+    const min = ideal * (1 - tolerance);
+    const max = ideal * (1 + tolerance);
+    
+    if (avg >= min && avg <= max) return 'Ideal';
+    if (avg < min) return 'Baixa';
+    return 'Alta';
+}
+
+function getSoilMoistureStatus(precipitation, evapotranspiration) {
+    const balance = precipitation - evapotranspiration;
+    
+    if (balance >= -10 && balance <= 10) return 'Ideal';
+    if (balance < -10) return 'Seco';
+    return 'Úmido';
+}
+
+// Funções de Cálculo
+function calculateAverage(values) {
+    return values.reduce((sum, val) => sum + val, 0) / values.length;
+}
+
+function calculateEvapotranspiration(temperature, humidity) {
+    // Modelo simplificado de Penman-Monteith
+    const avgTemp = calculateAverage(temperature);
+    const avgHumidity = calculateAverage(humidity);
+    
+    return (0.0023 * (avgTemp + 17.8) * Math.pow((100 - avgHumidity) / 100, 0.5));
+}
+
+function calculatePrecipitationDistribution(precipitation) {
+    const total = precipitation.reduce((sum, val) => sum + val, 0);
+    const daysWithRain = precipitation.filter(val => val > 0).length;
+    
+    return {
+        total,
+        daysWithRain,
+        intensity: total / (daysWithRain || 1)
+    };
+}
+
+function calculateHumidityVariation(humidity) {
+    const avg = calculateAverage(humidity);
+    const variance = humidity.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / humidity.length;
+    
+    return {
+        standardDeviation: Math.sqrt(variance),
+        coefficient: Math.sqrt(variance) / avg
+    };
+}
+
+// Valores Ideais por Cultura
+function getIdealTemperatures(crop) {
+    const idealTemps = {
+        soybean: { min: 20, max: 30 },
+        corn: { min: 22, max: 32 },
+        wheat: { min: 15, max: 25 },
+        // Adicione mais culturas conforme necessário
+    };
+    
+    return idealTemps[crop] || { min: 18, max: 28 }; // Valores padrão
+}
+
+function getIdealPrecipitation(crop) {
+    const idealPrecip = {
+        soybean: 550,
+        corn: 700,
+        wheat: 450,
+        // Adicione mais culturas conforme necessário
+    };
+    
+    return idealPrecip[crop] || 600; // Valor padrão
+}
+
+function getIdealHumidity(crop) {
+    const idealHumidity = {
+        soybean: 70,
+        corn: 65,
+        wheat: 60,
+        // Adicione mais culturas conforme necessário
+    };
+    
+    return idealHumidity[crop] || 65; // Valor padrão
+}
+// Funções de Exibição de Resultados
+function showSimulationResults(baseResults, probabilities) {
+    const resultsContainer = document.getElementById('simulationResults');
+    if (!resultsContainer) return;
+
+    resultsContainer.innerHTML = `
+        <h3>Resultados da Simulação</h3>
+        
+        ${createBaseResultsHTML(baseResults)}
+        ${createProbabilitiesTimelineHTML(probabilities)}
+        ${createDetailedAnalysisHTML(baseResults, probabilities)}
+    `;
+
+    // Inicializar gráficos e animações
+    initializeResultCharts();
+    animateResults();
+}
+
+function createBaseResultsHTML(results) {
+    return `
+        <div class="results-grid">
+            <div class="result-card animate-in">
+                <div class="result-icon">📊</div>
+                <h4>Produtividade Estimada</h4>
+                <div class="result-value counter">${results.yield}</div>
+                <div class="result-unit">toneladas por hectare</div>
+            </div>
+
+            <div class="result-card animate-in" style="animation-delay: 0.2s">
+                <div class="result-icon">💧</div>
+                <h4>Necessidade Hídrica</h4>
+                <div class="result-value counter">${results.water}</div>
+                <div class="result-unit">milímetros</div>
+            </div>
+
+            <div class="result-card animate-in" style="animation-delay: 0.4s">
+                <div class="result-icon">📅</div>
+                <h4>Ciclo de Cultivo</h4>
+                <div class="result-value counter">${results.cycle}</div>
+                <div class="result-unit">dias</div>
+            </div>
+        </div>
+    `;
+}
+
+function createProbabilitiesTimelineHTML(probabilities) {
+    return `
+        <div class="harvest-timeline animate-in" style="animation-delay: 0.6s">
+            <h4>Janela de Colheita</h4>
+            <div class="timeline-container">
+                ${probabilities.map((prob, index) => `
+                    <div class="timeline-item ${getProbabilityClass(prob.probability)}"
+                         style="animation-delay: ${0.8 + (index * 0.1)}s">
+                        <div class="date">${formatarData(prob.date)}</div>
+                        <div class="probability-bar">
+                            <div class="bar-fill" style="height: ${prob.probability}%"></div>
+                            <span>${Math.round(prob.probability)}%</span>
+                        </div>
+                        <div class="conditions">
+                            ${createConditionsIcons(prob.conditions)}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="timeline-legend">
+                ${createTimelineLegend()}
+            </div>
+        </div>
+    `;
+}
+
+function createDetailedAnalysisHTML(baseResults, probabilities) {
+    return `
+        <div class="detailed-analysis animate-in" style="animation-delay: 1s">
+            <h4>Análise Detalhada</h4>
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <h5>Condições Climáticas</h5>
+                    <div id="climateChart" class="chart-container"></div>
+                </div>
+                <div class="analysis-card">
+                    <h5>Distribuição de Probabilidade</h5>
+                    <div id="probabilityChart" class="chart-container"></div>
+                </div>
+            </div>
+            <button onclick="showFullAnalysis()" class="modern-button">
+                Ver Análise Completa
+            </button>
+        </div>
+    `;
+}
+
+// Funções de Suporte para Exibição
+function getProbabilityClass(probability) {
+    if (probability >= 75) return 'excellent';
+    if (probability >= 60) return 'good';
+    if (probability >= 40) return 'moderate';
+    return 'low';
+}
+
+function createConditionsIcons(conditions) {
+    const icons = {
+        temperature: {
+            Ideal: '🌡️',
+            'Abaixo do ideal': '❄️',
+            'Acima do ideal': '🔥'
+        },
+        humidity: {
+            Ideal: '💧',
+            Baixa: '📉',
+            Alta: '📈'
+        },
+        precipitation: {
+            Ideal: '☔',
+            Insuficiente: '⚠️',
+            Excessiva: '⛈️'
+        }
+    };
+
+    return `
+        <span title="Temperatura: ${conditions.temperature.status}">
+            ${icons.temperature[conditions.temperature.status]}
+        </span>
+        <span title="Umidade: ${conditions.humidity.status}">
+            ${icons.humidity[conditions.humidity.status]}
+        </span>
+        <span title="Precipitação: ${conditions.precipitation.status}">
+            ${icons.precipitation[conditions.precipitation.status]}
+        </span>
+    `;
+}
+
+function createTimelineLegend() {
+    return `
+        <div class="legend-item">
+            <span class="legend-color excellent"></span>
+            <span>Excelente (75-100%)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color good"></span>
+            <span>Bom (60-74%)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color moderate"></span>
+            <span>Moderado (40-59%)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color low"></span>
+            <span>Baixo (0-39%)</span>
+        </div>
+    `;
+}
+
+// Funções de Animação
+function animateResults() {
+    // Animar contadores
+    const counters = document.querySelectorAll('.counter');
+    counters.forEach(counter => {
+        const target = parseFloat(counter.innerText);
+        const duration = 1500;
+        const steps = 60;
+        const increment = target / steps;
+        let current = 0;
+
+        const updateCounter = () => {
+            current += increment;
+            if (current >= target) {
+                counter.innerText = target.toFixed(2);
+                return;
+            }
+            counter.innerText = current.toFixed(2);
+            requestAnimationFrame(updateCounter);
+        };
+
+        updateCounter();
+    });
+
+    // Animar barras de probabilidade
+    const bars = document.querySelectorAll('.probability-bar .bar-fill');
+    bars.forEach(bar => {
+        const height = bar.style.height;
+        bar.style.height = '0%';
+        setTimeout(() => {
+            bar.style.height = height;
+        }, 100);
+    });
+}
+// Funções de Gráficos e Visualização
+function initializeResultCharts() {
+    createClimateChart();
+    createProbabilityChart();
+}
+
+function createClimateChart() {
+    const ctx = document.getElementById('climateChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: getDatesArray(),
+            datasets: [
+                {
+                    label: 'Temperatura (°C)',
+                    data: getTemperatureData(),
+                    borderColor: '#ff6b6b',
+                    tension: 0.4
+                },
+                {
+                    label: 'Umidade (%)',
+                    data: getHumidityData(),
+                    borderColor: '#4dabf7',
+                    tension: 0.4
+                },
+                {
+                    label: 'Precipitação (mm)',
+                    data: getPrecipitationData(),
+                    borderColor: '#51cf66',
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function createProbabilityChart() {
+    const ctx = document.getElementById('probabilityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: getProbabilityDates(),
+            datasets: [{
+                label: 'Probabilidade de Sucesso (%)',
+                data: getProbabilityValues(),
+                backgroundColor: getProbabilityColors(),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+}
+
+// Funções de Análise Detalhada
+function showFullAnalysis() {
+    Swal.fire({
+        title: 'Análise Detalhada',
+        html: createFullAnalysisHTML(),
+        width: '80%',
+        padding: '2em',
+        confirmButtonText: 'Fechar',
+        confirmButtonColor: '#4CAF50',
+        showClass: {
+            popup: 'animate__animated animate__fadeIn'
+        }
+    });
+}
+
+function createFullAnalysisHTML() {
+    return `
+        <div class="full-analysis">
+            <div class="analysis-section">
+                <h4>Análise de Condições Climáticas</h4>
+                ${createClimateAnalysisHTML()}
+            </div>
+            
+            <div class="analysis-section">
+                <h4>Análise de Solo e Irrigação</h4>
+                ${createSoilIrrigationAnalysisHTML()}
+            </div>
+            
+            <div class="analysis-section">
+                <h4>Recomendações</h4>
+                ${createRecommendationsHTML()}
+            </div>
+            
+            <div class="analysis-section">
+                <h4>Alertas e Observações</h4>
+                ${createAlertsHTML()}
+            </div>
+        </div>
+    `;
+}
+
+function createClimateAnalysisHTML() {
+    return `
+        <div class="climate-analysis">
+            <div class="analysis-grid">
+                <div class="analysis-item">
+                    <h5>Temperatura</h5>
+                    ${createTemperatureAnalysisHTML()}
+                </div>
+                <div class="analysis-item">
+                    <h5>Precipitação</h5>
+                    ${createPrecipitationAnalysisHTML()}
+                </div>
+                <div class="analysis-item">
+                    <h5>Umidade</h5>
+                    ${createHumidityAnalysisHTML()}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createSoilIrrigationAnalysisHTML() {
+    return `
+        <div class="soil-irrigation-analysis">
+            <div class="analysis-grid">
+                <div class="analysis-item">
+                    <h5>Condições do Solo</h5>
+                    ${createSoilConditionsHTML()}
+                </div>
+                <div class="analysis-item">
+                    <h5>Necessidades de Irrigação</h5>
+                    ${createIrrigationNeedsHTML()}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createRecommendationsHTML() {
+    const recommendations = generateRecommendations();
+    return `
+        <div class="recommendations">
+            <ul class="recommendation-list">
+                ${recommendations.map(rec => `
+                    <li class="recommendation-item">
+                        <span class="recommendation-icon">${rec.icon}</span>
+                        <div class="recommendation-content">
+                            <h6>${rec.title}</h6>
+                            <p>${rec.description}</p>
+                        </div>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+    `;
+}
+
+function createAlertsHTML() {
+    const alerts = generateAlerts();
+    return `
+        <div class="alerts">
+            ${alerts.map(alert => `
+                <div class="alert-item ${alert.type}">
+                    <span class="alert-icon">${alert.icon}</span>
+                    <div class="alert-content">
+                        <h6>${alert.title}</h6>
+                        <p>${alert.message}</p>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Funções de Geração de Dados
+function generateRecommendations() {
+    // Implementar lógica de recomendações baseada nos dados
+    return [
+        {
+            icon: '🌱',
+            title: 'Preparação do Solo',
+            description: 'Recomendação específica para preparação do solo...'
+        },
+        {
+            icon: '💧',
+            title: 'Gestão da Irrigação',
+            description: 'Recomendação específica para irrigação...'
+        },
+        // Adicionar mais recomendações conforme necessário
+    ];
+}
+
+function generateAlerts() {
+    // Implementar lógica de alertas baseada nos dados
+    return [
+        {
+            type: 'warning',
+            icon: '⚠️',
+            title: 'Risco de Geada',
+            message: 'Possibilidade de geada nos próximos dias...'
+        },
+        {
+            type: 'info',
+            icon: 'ℹ️',
+            title: 'Período de Plantio',
+            message: 'Período ideal para plantio se aproximando...'
+        },
+        // Adicionar mais alertas conforme necessário
+    ];
+}
+
+// Funções de Suporte
+function showLoadingAnimation() {
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'loading-overlay';
+    loadingOverlay.id = 'loadingOverlay';
+    
+    loadingOverlay.innerHTML = `
+        <div class="loading-content">
+            <svg class="growing-plant" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- SVG da planta crescendo aqui -->
+            </svg>
+            <p>Processando dados...</p>
+        </div>
+    `;
+    
+    document.body.appendChild(loadingOverlay);
+}
+
+function hideLoadingAnimation() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('fade-out');
+        setTimeout(() => {
+            loadingOverlay.remove();
+        }, 500);
+    }
 }
 
 function showError(message) {
@@ -1050,61 +1073,25 @@ function showError(message) {
     });
 }
 
-// Funções de notícias
-async function loadNewsScreen() {
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="news-container">
-            <h2>Notícias Agrícolas</h2>
-            <div id="newsContent" class="news-grid">
-                <div class="loading-animation">
-                    <div class="spinner"></div>
-                    <p>Carregando notícias...</p>
-                </div>
-            </div>
-        </div>
-    `;
+function formatarData(data) {
+    return new Date(data).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
 
-    if (!marker) {
-        document.getElementById('newsContent').innerHTML = 
-            '<p class="empty-news">Selecione uma localização no mapa primeiro</p>';
-        return;
-    }
-
+// Funções de Histórico
+async function saveToHistory(simulationData) {
     try {
-        const response = await fetch(
-            `https://newsapi.org/v2/everything?q=agricultura+rural+brasil&language=pt&sortBy=publishedAt&apiKey=YOUR_API_KEY`
-        );
-        
-        if (!response.ok) {
-            throw new Error('Erro ao buscar notícias');
-        }
-
-        const data = await response.json();
-
-        if (!data.articles || data.articles.length === 0) {
-            document.getElementById('newsContent').innerHTML = 
-                '<p class="empty-news">Nenhuma notícia encontrada</p>';
-            return;
-        }
-
-        document.getElementById('newsContent').innerHTML = data.articles
-            .slice(0, 6)
-            .map(article => `
-                <div class="news-card">
-                    <div class="news-date">${formatarData(article.publishedAt)}</div>
-                    <h3>${article.title}</h3>
-                    <p>${article.description || 'Sem descrição disponível'}</p>
-                    <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="news-link">
-                        Ler mais
-                    </a>
-                </div>
-            `).join('');
-
+        const history = JSON.parse(localStorage.getItem('simulationHistory') || '[]');
+        history.unshift({
+            id: Date.now(),
+            ...simulationData
+        });
+        localStorage.setItem('simulationHistory', JSON.stringify(history.slice(0, 50)));
     } catch (error) {
-        console.error('Erro ao carregar notícias:', error);
-        document.getElementById('newsContent').innerHTML = 
-            '<p class="error-message">Erro ao carregar notícias. Tente novamente mais tarde.</p>';
+        console.error('Erro ao salvar no histórico:', error);
     }
 }
 
@@ -1156,3 +1143,11 @@ window.onload = function() {
         showError('Erro ao inicializar a aplicação');
     }
 };
+
+// Exportar funções necessárias
+window.showScreen = showScreen;
+window.handleSimulation = handleSimulation;
+window.selectLocation = selectLocation;
+window.showCalculationDetails = showCalculationDetails;
+window.changePage = changePage;
+

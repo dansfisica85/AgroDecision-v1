@@ -368,14 +368,56 @@ function calculateCropMetrics(data) {
 
     // Dados base de produtividade (ton/hectare)
     const baseYield = {
-        soybean: 3.5,
-        corn: 6.0,
-        wheat: 3.2,
-        cotton: 4.5,
-        rice: 4.8,
-        beans: 2.5,
-        cassava: 20.0,
-        potato: 25.0
+        soybean: 3.5,     // Soja
+        corn: 6.0,        // Milho
+        wheat: 3.2,       // Trigo
+        cotton: 4.5,      // Algodão
+        rice: 4.8,        // Arroz
+        beans: 2.5,       // Feijão
+        cassava: 20.0,    // Mandioca
+        potato: 25.0,     // Batata
+        sugarcane: 75.0,  // Cana-de-açúcar
+        coffee: 2.0,      // Café
+        orange: 30.0,     // Laranja
+        grape: 15.0,      // Uva
+        apple: 35.0,      // Maçã
+        banana: 40.0,     // Banana
+        mango: 25.0,      // Manga
+        papaya: 45.0,     // Mamão
+        pineapple: 40.0,  // Abacaxi
+        watermelon: 35.0, // Melancia
+        melon: 25.0,      // Melão
+        tomato: 80.0,     // Tomate
+        onion: 30.0,      // Cebola
+        carrot: 35.0,     // Cenoura
+        lettuce: 25.0,    // Alface
+        cabbage: 45.0,    // Repolho
+        pepper: 30.0,     // Pimentão
+        cucumber: 40.0,   // Pepino
+        garlic: 12.0,     // Alho
+        peanut: 3.0,      // Amendoim
+        sunflower: 2.5,   // Girassol
+        tobacco: 2.2,     // Tabaco
+        eucalyptus: 45.0, // Eucalipto
+        pine: 35.0,       // Pinus
+        rubber: 2.0,      // Seringueira
+        palm: 25.0,       // Palmeira
+        coconut: 15.0,    // Coco
+        avocado: 20.0,    // Abacate
+        lemon: 25.0,      // Limão
+        tangerine: 22.0,  // Tangerina
+        passion_fruit: 15.0, // Maracujá
+        guava: 25.0,      // Goiaba
+        fig: 12.0,        // Figo
+        peach: 20.0,      // Pêssego
+        plum: 15.0,       // Ameixa
+        pear: 25.0,       // Pera
+        strawberry: 35.0, // Morango
+        blackberry: 12.0, // Amora
+        raspberry: 10.0,  // Framboesa
+        blueberry: 8.0,   // Mirtilo
+        acai: 10.0,       // Açaí
+        cashew: 1.5       // Caju
     };
 
     // Verificar se a cultura é suportada
@@ -419,14 +461,56 @@ function calculateCropMetrics(data) {
 
     // Necessidade hídrica base (mm) com validação
     const waterUsage = {
-        soybean: 550,
-        corn: 700,
-        wheat: 450,
-        cotton: 800,
-        rice: 1200,
-        beans: 400,
-        cassava: 800,
-        potato: 500
+        soybean: 550,     // Soja
+        corn: 700,        // Milho
+        wheat: 450,       // Trigo
+        cotton: 800,      // Algodão
+        rice: 1200,       // Arroz
+        beans: 400,       // Feijão
+        cassava: 800,     // Mandioca
+        potato: 500,      // Batata
+        sugarcane: 1500,  // Cana-de-açúcar
+        coffee: 1600,     // Café
+        orange: 900,      // Laranja
+        grape: 700,       // Uva
+        apple: 800,       // Maçã
+        banana: 1800,     // Banana
+        mango: 1000,      // Manga
+        papaya: 1600,     // Mamão
+        pineapple: 1200,  // Abacaxi
+        watermelon: 500,  // Melancia
+        melon: 450,       // Melão
+        tomato: 600,      // Tomate
+        onion: 450,       // Cebola
+        carrot: 400,      // Cenoura
+        lettuce: 250,     // Alface
+        cabbage: 380,     // Repolho
+        pepper: 600,      // Pimentão
+        cucumber: 450,    // Pepino
+        garlic: 350,      // Alho
+        peanut: 500,      // Amendoim
+        sunflower: 600,   // Girassol
+        tobacco: 500,     // Tabaco
+        eucalyptus: 1200, // Eucalipto
+        pine: 1000,       // Pinus
+        rubber: 1500,     // Seringueira
+        palm: 1300,       // Palmeira
+        coconut: 1300,    // Coco
+        avocado: 900,     // Abacate
+        lemon: 900,       // Limão
+        tangerine: 900,   // Tangerina
+        passion_fruit: 800, // Maracujá
+        guava: 800,       // Goiaba
+        fig: 700,         // Figo
+        peach: 750,       // Pêssego
+        plum: 700,        // Ameixa
+        pear: 750,        // Pera
+        strawberry: 500,  // Morango
+        blackberry: 600,  // Amora
+        raspberry: 600,   // Framboesa
+        blueberry: 550,   // Mirtilo
+        acai: 1200,       // Açaí
+        cashew: 800       // Caju
     };
 
     // Calcular necessidade hídrica com proteção contra divisão por zero

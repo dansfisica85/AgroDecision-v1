@@ -1,6 +1,60 @@
 // Variáveis globais
 let map, marker;
 
+// Dados base de produtividade (ton/hectare)
+const baseYield = {
+    soybean: 3.5,     // Soja
+    corn: 6.0,        // Milho
+    wheat: 3.2,       // Trigo
+    cotton: 4.5,      // Algodão
+    rice: 4.8,        // Arroz
+    beans: 2.5,       // Feijão
+    cassava: 20.0,    // Mandioca
+    potato: 25.0,     // Batata
+    sugarcane: 75.0,  // Cana-de-açúcar
+    coffee: 2.0,      // Café
+    orange: 30.0,     // Laranja
+    grape: 15.0,      // Uva
+    apple: 35.0,      // Maçã
+    banana: 40.0,     // Banana
+    mango: 25.0,      // Manga
+    papaya: 45.0,     // Mamão
+    pineapple: 40.0,  // Abacaxi
+    watermelon: 35.0, // Melancia
+    melon: 25.0,      // Melão
+    tomato: 80.0,     // Tomate
+    onion: 30.0,      // Cebola
+    carrot: 35.0,     // Cenoura
+    lettuce: 25.0,    // Alface
+    cabbage: 45.0,    // Repolho
+    pepper: 30.0,     // Pimentão
+    cucumber: 40.0,   // Pepino
+    garlic: 12.0,     // Alho
+    peanut: 3.0,      // Amendoim
+    sunflower: 2.5,   // Girassol
+    tobacco: 2.2,     // Tabaco
+    eucalyptus: 45.0, // Eucalipto
+    pine: 35.0,       // Pinus
+    rubber: 2.0,      // Seringueira
+    palm: 25.0,       // Palmeira
+    coconut: 15.0,    // Coco
+    avocado: 20.0,    // Abacate
+    lemon: 25.0,      // Limão
+    tangerine: 22.0,  // Tangerina
+    passion_fruit: 15.0, // Maracujá
+    guava: 25.0,      // Goiaba
+    fig: 12.0,        // Figo
+    peach: 20.0,      // Pêssego
+    plum: 15.0,       // Ameixa
+    pear: 25.0,       // Pera
+    strawberry: 35.0, // Morango
+    blackberry: 12.0, // Amora
+    raspberry: 10.0,  // Framboesa
+    blueberry: 8.0,   // Mirtilo
+    acai: 10.0,       // Açaí
+    cashew: 1.5       // Caju
+};
+
 // Inicialização do mapa
 function initMap() {
     map = L.map('map', {

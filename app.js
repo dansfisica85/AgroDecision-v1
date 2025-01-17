@@ -164,10 +164,12 @@ function showScreen(screenName) {
 // Funções de simulação
 function loadSimulationScreen() {
     const content = document.getElementById('content');
+    const hasLocation = window.climateData !== undefined;
+
     content.innerHTML = `
         <div class="simulation-container">
             <h2>Simulação de Colheita</h2>
-            <div class="location-warning" id="locationWarning" style="display: none;">
+            <div class="location-warning" id="locationWarning" style="display: ${hasLocation ? 'none' : 'flex'}">
                 <p>⚠️ Selecione uma localização no mapa antes de simular</p>
             </div>
             <form id="simulationForm" onsubmit="handleSimulation(event)">
@@ -275,7 +277,11 @@ async function handleSimulation(event) {
     try {
         // Verificar se uma localização foi selecionada
         if (!window.climateData) {
-            showError('Por favor, selecione uma localização no mapa antes de simular');
+            const warningElement = document.getElementById('locationWarning');
+            if (warningElement) {
+                warningElement.style.display = 'flex';
+                warningElement.scrollIntoView({ behavior: 'smooth' });
+            }
             return;
         }
 
@@ -328,6 +334,9 @@ async function handleSimulation(event) {
 }
 
 function showLoadingAnimation() {
+    // Remove any existing loading animation
+    hideLoadingAnimation();
+
     const loading = document.createElement('div');
     loading.className = 'loading-animation';
     loading.id = 'loadingAnimation';
@@ -345,7 +354,11 @@ function hideLoadingAnimation() {
     const loading = document.getElementById('loadingAnimation');
     if (loading) {
         loading.classList.add('fade-out');
-        setTimeout(() => loading.remove(), 500);
+        setTimeout(() => {
+            if (loading && loading.parentNode) {
+                loading.parentNode.removeChild(loading);
+            }
+        }, 500);
     }
 }
 

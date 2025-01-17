@@ -262,7 +262,7 @@ function loadSimulationScreen() {
                 </div>
 
                 <button type="submit" class="modern-button">
-                    Simular Simular Colheita
+                    Simular Colheita
                 </button>
             </form>
 
@@ -358,6 +358,13 @@ function hideLoadingAnimation() {
             if (loading && loading.parentNode) {
                 loading.parentNode.removeChild(loading);
             }
+            // Garantir que qualquer overlay residual seja removido
+            const overlays = document.querySelectorAll('.loading-overlay');
+            overlays.forEach(overlay => {
+                if (overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+            });
         }, 500);
     }
 }
@@ -669,7 +676,15 @@ function calculateIrrigationEfficiency(climateData) {
 
 function showSimulationResults(results, inputData) {
     const resultsContainer = document.getElementById('simulationResults');
+    if (!resultsContainer) {
+        console.error('Container de resultados não encontrado');
+        return;
+    }
+
     const probabilities = calculateProbabilities(window.climateData, inputData);
+    
+    // Scroll para o topo do container antes de atualizar o conteúdo
+    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
     resultsContainer.innerHTML = `
         <h3>Resultados da Simulação</h3>

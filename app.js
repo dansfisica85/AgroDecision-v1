@@ -519,14 +519,56 @@ function calculateCropMetrics(data) {
 
     // Ciclo da cultura (dias) com validação
     const cycles = {
-        soybean: 120,
-        corn: 135,
-        wheat: 110,
-        cotton: 170,
-        rice: 120,
-        beans: 90,
-        cassava: 300,
-        potato: 100
+        soybean: 120,     // Soja
+        corn: 135,        // Milho
+        wheat: 110,       // Trigo
+        cotton: 170,      // Algodão
+        rice: 120,        // Arroz
+        beans: 90,        // Feijão
+        cassava: 300,     // Mandioca
+        potato: 100,      // Batata
+        sugarcane: 365,   // Cana-de-açúcar (ciclo de 12 meses)
+        coffee: 730,      // Café (primeiro ciclo)
+        orange: 240,      // Laranja
+        grape: 150,       // Uva
+        apple: 180,       // Maçã
+        banana: 300,      // Banana
+        mango: 150,       // Manga
+        papaya: 240,      // Mamão
+        pineapple: 450,   // Abacaxi
+        watermelon: 90,   // Melancia
+        melon: 80,        // Melão
+        tomato: 120,      // Tomate
+        onion: 120,       // Cebola
+        carrot: 100,      // Cenoura
+        lettuce: 45,      // Alface
+        cabbage: 90,      // Repolho
+        pepper: 120,      // Pimentão
+        cucumber: 60,     // Pepino
+        garlic: 150,      // Alho
+        peanut: 120,      // Amendoim
+        sunflower: 120,   // Girassol
+        tobacco: 180,     // Tabaco
+        eucalyptus: 2190, // Eucalipto (ciclo inicial - 6 anos)
+        pine: 2555,       // Pinus (ciclo inicial - 7 anos)
+        rubber: 2190,     // Seringueira (produção inicial)
+        palm: 1095,       // Palmeira (produção inicial - 3 anos)
+        coconut: 1825,    // Coco (produção inicial - 5 anos)
+        avocado: 1095,    // Abacate (produção inicial - 3 anos)
+        lemon: 365,       // Limão
+        tangerine: 365,   // Tangerina
+        passion_fruit: 270, // Maracujá
+        guava: 365,       // Goiaba
+        fig: 365,         // Figo
+        peach: 180,       // Pêssego
+        plum: 180,        // Ameixa
+        pear: 180,        // Pera
+        strawberry: 90,   // Morango
+        blackberry: 120,  // Amora
+        raspberry: 120,   // Framboesa
+        blueberry: 120,   // Mirtilo
+        acai: 1460,       // Açaí (produção inicial - 4 anos)
+        cashew: 730       // Caju (produção inicial - 2 anos)
     };
 
     // Validar e calcular data de colheita

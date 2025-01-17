@@ -271,6 +271,22 @@ function hideLoadingAnimation() {
 }
 
 function calculateCropMetrics(data) {
+    // Validação de entrada
+    if (!data || !data.crop || !data.area || !data.irrigation || !data.soil || !data.plantingDate) {
+        console.error('Dados de entrada inválidos para cálculo de métricas');
+        return {
+            yield: '0.00',
+            water: '0.00',
+            cycle: 0,
+            harvestDate: new Date().toISOString().split('T')[0],
+            calculations: {
+                yieldCalc: { baseYield: 0, irrigationFactor: 0, soilFactor: 0, area: 0 },
+                waterCalc: { baseUsage: 0, irrigationFactor: 0, area: 0 },
+                cycleCalc: { duration: 0, plantingDate: new Date().toISOString().split('T')[0] }
+            }
+        };
+    }
+
     // Dados base de produtividade (ton/hectare)
     const baseYield = {
         soybean: 3.5,
@@ -283,26 +299,46 @@ function calculateCropMetrics(data) {
         potato: 25.0
     };
 
+    // Verificar se a cultura é suportada
+    if (!baseYield[data.crop]) {
+        console.error('Cultura não suportada:', data.crop);
+        return null;
+    }
+
     // Fatores de eficiência de irrigação baseados em dados climáticos
     const irrigationEfficiency = {
         cerqueiro: calculateIrrigationEfficiency(window.climateData)
     };
 
+    // Verificar se o sistema de irrigação é suportado
+    if (!irrigationEfficiency[data.irrigation]) {
+        console.error('Sistema de irrigação não suportado:', data.irrigation);
+        return null;
+    }
+
     // Fatores de qualidade do solo
     const soilQuality = {
-        clay: 1.1,
-        sandy: 0.8,
-        loam: 1.3
+        clay: 1.1,  // Solo argiloso - boa retenção de nutrientes
+        sandy: 0.8, // Solo arenoso - menor retenção
+        loam: 1.3   // Solo franco - ideal para maioria das culturas
     };
 
-    // Cálculo da produtividade
+    // Verificar se o tipo de solo é suportado
+    if (!soilQuality[data.soil]) {
+        console.error('Tipo de solo não suportado:', data.soil);
+        return null;
+    }
+
+    // Cálculo da produtividade com validação
     const yieldPerHectare = baseYield[data.crop] * 
         irrigationEfficiency[data.irrigation] * 
         soilQuality[data.soil];
     
-    const totalYield = yieldPerHectare * data.area;
+    // Garantir que a área é um número positivo
+    const validArea = Math.max(0, Number(data.area));
+    const totalYield = yieldPerHectare * validArea;
 
-    // Necessidade hídrica base (mm)
+    // Necessidade hídrica base (mm) com validação
     const waterUsage = {
         soybean: 550,
         corn: 700,
@@ -314,10 +350,11 @@ function calculateCropMetrics(data) {
         potato: 500
     };
 
-    const waterRequired = data.area * waterUsage[data.crop] * 
-        (1 / irrigationEfficiency[data.irrigation]);
+    // Calcular necessidade hídrica com proteção contra divisão por zero
+    const waterRequired = validArea * waterUsage[data.crop] * 
+        (1 / Math.max(0.1, irrigationEfficiency[data.irrigation]));
 
-    // Ciclo da cultura (dias)
+    // Ciclo da cultura (dias) com validação
     const cycles = {
         soybean: 120,
         corn: 135,
@@ -329,9 +366,16 @@ function calculateCropMetrics(data) {
         potato: 100
     };
 
-    // Cálculo da data de colheita
-    const harvestDate = new Date(data.plantingDate);
-    harvestDate.setDate(harvestDate.getDate() + cycles[data.crop]);
+    // Validar e calcular data de colheita
+    let harvestDate;
+    try {
+        harvestDate = new Date(data.plantingDate);
+        if (isNaN(harvestDate.getTime())) throw new Error('Data de plantio inválida');
+        harvestDate.setDate(harvestDate.getDate() + cycles[data.crop]);
+    } catch (error) {
+        console.error('Erro ao calcular data de colheita:', error);
+        harvestDate = new Date();
+    }
 
     // Cálculos detalhados para exibição
     const calculations = {

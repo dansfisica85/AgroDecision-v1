@@ -219,6 +219,16 @@ function loadSimulationScreen() {
             <div id="simulationResults" class="results-container"></div>
         </div>
     `;
+
+    // Populate the crop dropdown after form creation
+    const cropSelect = document.getElementById('crop');
+    if (cropSelect) {
+        const crops = Object.keys(baseYield).sort((a, b) => getCropName(a).localeCompare(getCropName(b)));
+        cropSelect.innerHTML = `
+            <option value="">Selecione a cultura</option>
+            ${crops.map(crop => `<option value="${crop}">${getCropName(crop)}</option>`).join('')}
+        `;
+    }
 }
 
 async function handleSimulation(event) {

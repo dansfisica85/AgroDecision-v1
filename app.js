@@ -167,6 +167,9 @@ function loadSimulationScreen() {
     content.innerHTML = `
         <div class="simulation-container">
             <h2>Simulação de Colheita</h2>
+            <div class="location-warning" id="locationWarning" style="display: none;">
+                <p>⚠️ Selecione uma localização no mapa antes de simular</p>
+            </div>
             <form id="simulationForm" onsubmit="handleSimulation(event)">
                 <div class="form-grid">
                     <div class="input-group">
@@ -181,6 +184,48 @@ function loadSimulationScreen() {
                             <option value="beans">Feijão</option>
                             <option value="cassava">Mandioca</option>
                             <option value="potato">Batata</option>
+                            <option value="sugarcane">Cana-de-açúcar</option>
+                            <option value="coffee">Café</option>
+                            <option value="orange">Laranja</option>
+                            <option value="grape">Uva</option>
+                            <option value="apple">Maçã</option>
+                            <option value="banana">Banana</option>
+                            <option value="mango">Manga</option>
+                            <option value="papaya">Mamão</option>
+                            <option value="pineapple">Abacaxi</option>
+                            <option value="watermelon">Melancia</option>
+                            <option value="melon">Melão</option>
+                            <option value="tomato">Tomate</option>
+                            <option value="onion">Cebola</option>
+                            <option value="carrot">Cenoura</option>
+                            <option value="lettuce">Alface</option>
+                            <option value="cabbage">Repolho</option>
+                            <option value="pepper">Pimentão</option>
+                            <option value="cucumber">Pepino</option>
+                            <option value="garlic">Alho</option>
+                            <option value="peanut">Amendoim</option>
+                            <option value="sunflower">Girassol</option>
+                            <option value="tobacco">Tabaco</option>
+                            <option value="eucalyptus">Eucalipto</option>
+                            <option value="pine">Pinus</option>
+                            <option value="rubber">Seringueira</option>
+                            <option value="palm">Palmeira</option>
+                            <option value="coconut">Coco</option>
+                            <option value="avocado">Abacate</option>
+                            <option value="lemon">Limão</option>
+                            <option value="tangerine">Tangerina</option>
+                            <option value="passion_fruit">Maracujá</option>
+                            <option value="guava">Goiaba</option>
+                            <option value="fig">Figo</option>
+                            <option value="peach">Pêssego</option>
+                            <option value="plum">Ameixa</option>
+                            <option value="pear">Pera</option>
+                            <option value="strawberry">Morango</option>
+                            <option value="blackberry">Amora</option>
+                            <option value="raspberry">Framboesa</option>
+                            <option value="blueberry">Mirtilo</option>
+                            <option value="acai">Açaí</option>
+                            <option value="cashew">Caju</option>
                         </select>
                     </div>
 
@@ -227,47 +272,81 @@ function loadSimulationScreen() {
 async function handleSimulation(event) {
     event.preventDefault();
     
-    // Mostrar animação de carregamento
-    showLoadingAnimation();
+    try {
+        // Verificar se uma localização foi selecionada
+        if (!window.climateData) {
+            showError('Por favor, selecione uma localização no mapa antes de simular');
+            return;
+        }
 
-    const form = event.target;
-    const data = {
-        crop: form.crop.value,
-        area: parseFloat(form.area.value),
-        irrigation: form.irrigation.value,
-        soil: form.soil.value,
-        plantingDate: form.plantingDate.value
-    };
+        // Mostrar animação de carregamento
+        showLoadingAnimation();
 
-    // Simular processamento
-    await new Promise(resolve => setTimeout(resolve, 1500));
+        const form = event.target;
+        const data = {
+            crop: form.crop.value,
+            area: parseFloat(form.area.value),
+            irrigation: form.irrigation.value,
+            soil: form.soil.value,
+            plantingDate: form.plantingDate.value
+        };
 
-    const results = calculateCropMetrics(data);
-    
-    // Salvar no histórico
-    await saveToHistory({
-        ...data,
-        results,
-        timestamp: new Date().toISOString()
-    });
+        // Validar dados
+        if (!data.crop || !data.area || !data.irrigation || !data.soil || !data.plantingDate) {
+            throw new Error('Todos os campos são obrigatórios');
+        }
 
-    hideLoadingAnimation();
-    showSimulationResults(results, data);
+        // Simular processamento
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const results = calculateCropMetrics(data);
+        
+        if (!results) {
+            throw new Error('Erro ao calcular métricas da cultura');
+        }
+
+        // Salvar no histórico
+        await saveToHistory({
+            ...data,
+            results,
+            timestamp: new Date().toISOString()
+        });
+
+        // Mostrar resultados
+        const resultsContainer = document.getElementById('simulationResults');
+        if (resultsContainer) {
+            showSimulationResults(results, data);
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+    } catch (error) {
+        console.error('Erro na simulação:', error);
+        showError(error.message || 'Erro ao processar a simulação');
+    } finally {
+        hideLoadingAnimation();
+    }
 }
 
 function showLoadingAnimation() {
     const loading = document.createElement('div');
     loading.className = 'loading-animation';
+    loading.id = 'loadingAnimation';
     loading.innerHTML = `
-        <div class="spinner"></div>
-        <p>Calculando resultados...</p>
+        <div class="loading-overlay"></div>
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Calculando resultados...</p>
+        </div>
     `;
     document.body.appendChild(loading);
 }
 
 function hideLoadingAnimation() {
-    const loading = document.querySelector('.loading-animation');
-    if (loading) loading.remove();
+    const loading = document.getElementById('loadingAnimation');
+    if (loading) {
+        loading.classList.add('fade-out');
+        setTimeout(() => loading.remove(), 500);
+    }
 }
 
 function calculateCropMetrics(data) {

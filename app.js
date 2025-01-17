@@ -178,56 +178,6 @@ function loadSimulationScreen() {
                         <label for="crop">Cultura</label>
                         <select class="modern-input" id="crop" required>
                             <option value="">Selecione a cultura</option>
-                            <option value="soybean">Soja</option>
-                            <option value="corn">Milho</option>
-                            <option value="wheat">Trigo</option>
-                            <option value="cotton">Algodão</option>
-                            <option value="rice">Arroz</option>
-                            <option value="beans">Feijão</option>
-                            <option value="cassava">Mandioca</option>
-                            <option value="potato">Batata</option>
-                            <option value="sugarcane">Cana-de-açúcar</option>
-                            <option value="coffee">Café</option>
-                            <option value="orange">Laranja</option>
-                            <option value="grape">Uva</option>
-                            <option value="apple">Maçã</option>
-                            <option value="banana">Banana</option>
-                            <option value="mango">Manga</option>
-                            <option value="papaya">Mamão</option>
-                            <option value="pineapple">Abacaxi</option>
-                            <option value="watermelon">Melancia</option>
-                            <option value="melon">Melão</option>
-                            <option value="tomato">Tomate</option>
-                            <option value="onion">Cebola</option>
-                            <option value="carrot">Cenoura</option>
-                            <option value="lettuce">Alface</option>
-                            <option value="cabbage">Repolho</option>
-                            <option value="pepper">Pimentão</option>
-                            <option value="cucumber">Pepino</option>
-                            <option value="garlic">Alho</option>
-                            <option value="peanut">Amendoim</option>
-                            <option value="sunflower">Girassol</option>
-                            <option value="tobacco">Tabaco</option>
-                            <option value="eucalyptus">Eucalipto</option>
-                            <option value="pine">Pinus</option>
-                            <option value="rubber">Seringueira</option>
-                            <option value="palm">Palmeira</option>
-                            <option value="coconut">Coco</option>
-                            <option value="avocado">Abacate</option>
-                            <option value="lemon">Limão</option>
-                            <option value="tangerine">Tangerina</option>
-                            <option value="passion_fruit">Maracujá</option>
-                            <option value="guava">Goiaba</option>
-                            <option value="fig">Figo</option>
-                            <option value="peach">Pêssego</option>
-                            <option value="plum">Ameixa</option>
-                            <option value="pear">Pera</option>
-                            <option value="strawberry">Morango</option>
-                            <option value="blackberry">Amora</option>
-                            <option value="raspberry">Framboesa</option>
-                            <option value="blueberry">Mirtilo</option>
-                            <option value="acai">Açaí</option>
-                            <option value="cashew">Caju</option>
                         </select>
                     </div>
 

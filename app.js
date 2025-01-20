@@ -273,6 +273,7 @@ async function handleSimulation(event) {
         hideLoadingAnimation();
     }
 }
+
 // Carregamento de Notícias
 async function loadNewsScreen() {
     const content = document.getElementById('content');
@@ -436,6 +437,7 @@ function calculateProbabilityScore(conditions, crop) {
         return total + (scores[factor] * weight);
     }, 0);
 }
+
 // Funções de Análise Climática
 function getHistoricalDataForMonth(month, climateData) {
     if (!climateData?.properties?.parameter) {
@@ -611,6 +613,7 @@ function getIdealHumidity(crop) {
     
     return idealHumidity[crop] || 65; // Valor padrão
 }
+
 // Funções de Exibição de Resultados
 function showSimulationResults(baseResults, probabilities) {
     const resultsContainer = document.getElementById('simulationResults');
@@ -798,6 +801,7 @@ function animateResults() {
         }, 100);
     });
 }
+
 // Funções de Gráficos e Visualização
 function initializeResultCharts() {
     createClimateChart();
@@ -1150,4 +1154,3 @@ window.handleSimulation = handleSimulation;
 window.selectLocation = selectLocation;
 window.showCalculationDetails = showCalculationDetails;
 window.changePage = changePage;
-

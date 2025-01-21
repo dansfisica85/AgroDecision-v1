@@ -792,3 +792,181 @@ async function saveToHistory(data) {
         console.error('Erro ao salvar no histórico:', error);
     }
 }
+
+// Gerenciamento de Telas
+function showScreen(screenId) {
+    // Padrão para home se nenhuma tela for especificada
+    screenId = screenId || 'home';
+    
+    // Telas disponíveis e suas funções correspondentes
+    const screens = {
+        'home': showHomeScreen,
+        'simulate': showSimulateScreen,
+        'news': loadNewsScreen,
+        'history': loadHistoryScreen
+    };
+
+    // Atualiza o estado ativo na navegação
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-screen') === screenId) {
+            item.classList.add('active');
+        }
+    });
+
+    // Mostra a tela selecionada
+    try {
+        if (screens[screenId]) {
+            screens[screenId]();
+        } else {
+            console.error('Tela não encontrada:', screenId);
+            screens.home();
+        }
+    } catch (error) {
+        console.error('Erro ao mostrar tela:', error);
+        showError('Erro ao carregar a tela');
+    }
+
+    // Adiciona event listener ao formulário após criar o HTML
+    const form = document.querySelector('form');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        // Coleta os dados do formulário
+        const area = document.getElementById('area').value;
+        const irrigation = document.getElementById('irrigation').value;
+        const soil = document.getElementById('soil').value;
+        const plantingDate = document.getElementById('plantingDate').value;
+
+        // Processa a simulação
+        const results = calculateSimulation(area, irrigation, soil, plantingDate);
+        
+        // Exibe os resultados
+        displayResults(results);
+    });
+}
+
+function calculateSimulation(area, irrigation, soil, plantingDate) {
+    // Exemplo de cálculo básico - ajuste conforme suas necessidades
+    let produtividadeBase = 3000; // kg/ha
+    
+    // Ajustes baseados no sistema de irrigação
+    const irrigationFactors = {
+        'none': 1,
+        'sprinkler': 1.3,
+        'drip': 1.4
+    };
+
+    // Ajustes baseados no tipo de solo
+    const soilFactors = {
+        'clay': 1.2,
+        'sandy': 0.9,
+        'loam': 1.1
+    };
+
+    const produtividadeTotal = produtividadeBase * irrigationFactors[irrigation] * soilFactors[soil];
+    const producaoTotal = produtividadeTotal * area;
+
+    return {
+        area: area,
+        produtividadeEstimada: produtividadeTotal.toFixed(2),
+        producaoTotal: producaoTotal.toFixed(2),
+        dataPlantio: plantingDate
+    };
+}
+
+function displayResults(results) {
+    const resultsDiv = document.getElementById('simulationResults');
+    resultsDiv.innerHTML = `
+        <h3>Resultados da Simulação</h3>
+        <p>Área: ${results.area} hectares</p>
+        <p>Produtividade Estimada: ${results.produtividadeEstimada} kg/ha</p>
+        <p>Produção Total Estimada: ${results.producaoTotal} kg</p>
+        <p>Data de Plantio: ${new Date(results.dataPlantio).toLocaleDateString('pt-BR')}</p>
+    `;
+}
+
+// Tela Inicial
+function showHomeScreen() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="welcome-container">
+            <h1>Bem-vindo ao AgroDecision</h1>
+            <p>Selecione uma localização no mapa e comece sua simulação de cultivo.</p>
+            <div id="locationWarning" class="warning-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                Selecione uma localização no mapa antes de continuar
+            </div>
+        </div>
+        <div id="map" class="map-container"></div>
+        <div class="map-search-container">
+            <input type="text" id="addressSearch" placeholder="Buscar localização...">
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    `;
+    
+    // Reinicializa o mapa se necessário
+    if (!map) {
+        initMap();
+    } else {
+        // Atualiza o container do mapa
+        map.invalidateSize();
+    }
+}
+
+// Tela de Simulação
+function showSimulateScreen() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="simulation-container">
+            <h2>Simulação de Cultivo</h2>
+            <form id="simulationForm" onsubmit="handleSimulation(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="crop">Cultura</label>
+                        <select id="crop" required>
+                            <option value="Soja">Soja</option>
+                            <option value="Milho">Milho</option>
+                            <option value="Cana-de-açúcar">Cana-de-açúcar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="area">Área (hectares)</label>
+                        <input type="number" id="area" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="irrigation">Sistema de Irrigação</label>
+                        <select id="irrigation" required>
+                            <option value="none">Sem Irrigação</option>
+                            <option value="sprinkler">Aspersão</option>
+                            <option value="drip">Gotejamento</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="soil">Tipo de Solo</label>
+                        <select id="soil" required>
+                            <option value="clay">Argiloso</option>
+                            <option value="sandy">Arenoso</option>
+                            <option value="loam">Franco</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="plantingDate">Data de Plantio</label>
+                        <input type="date" id="plantingDate" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Simular</button>
+            </form>
+            <div id="simulationResults" class="simulation-results"></div>
+        </div>
+    `;
+
+    // Define a data mínima como hoje
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('plantingDate').min = today;
+}
+
+document.addEventListener('DOMContentLoaded', (event) => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('plantingDate').min = today;
+});

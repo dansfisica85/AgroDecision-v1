@@ -6,14 +6,14 @@
     <title>AgroDecision - Simulador de Colheitas</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;,">
     
     <!-- CSS Externos -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
     
-    <!-- CSS Personalizado -->
+    <!-- CSS Principal -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -29,10 +29,10 @@
             <i>🏠</i> <span>Início</span>
         </div>
         <div class="nav-item" onclick="showScreen('simulation')">
-            <i>🌾</i> <span>Simulação de Colheita</span>
+            <i>🌾</i> <span>Simulação</span>
         </div>
         <div class="nav-item" onclick="showScreen('news')">
-            <i>📰</i> <span>Notícias Agrícolas</span>
+            <i>📰</i> <span>Notícias</span>
         </div>
         <div class="nav-item" onclick="showScreen('history')">
             <i>📋</i> <span>Histórico</span>
@@ -72,7 +72,7 @@
                 <path d="M 100,120 C 120,110 130,90 120,80 C 110,70 90,80 100,120" fill="#4CAF50"/>
             </g>
         </svg>
-        <p>Processando...</p>
+        <p>Processando dados...</p>
     </div>
 
     <!-- Scripts Externos -->

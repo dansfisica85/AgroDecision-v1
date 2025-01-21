@@ -21,35 +21,30 @@ const CONFIG = {
     }
 };
 
-// Dados base de produtividade (ton/hectare)
+// Dados base de produtividade (ton/hectare) e condições ideais
 const CROP_DATA = {
-    soybean: {
-        baseYield: 3.5,
-        cropName: 'Soja',
-        idealTemp: { min: 20, max: 30 },
-        idealHumidity: { min: 60, max: 80 },
-        idealPrecip: { min: 450, max: 700 },
-        cropCycle: 120,
-        waterNeed: 550
+    'Soja': {
+        evapotranspiration: { min: 500, max: 700 },
+        solarRadiation: { min: 18, max: 22 },
+        precipitation: { min: 450, max: 700 },
+        humidity: { min: 60, max: 80 },
+        temperature: { min: 20, max: 30 }
     },
-    corn: {
-        baseYield: 6.0,
-        cropName: 'Milho',
-        idealTemp: { min: 22, max: 32 },
-        idealHumidity: { min: 55, max: 75 },
-        idealPrecip: { min: 500, max: 800 },
-        cropCycle: 150,
-        waterNeed: 700
+    'Milho': {
+        evapotranspiration: { min: 450, max: 650 },
+        solarRadiation: { min: 20, max: 24 },
+        precipitation: { min: 500, max: 800 },
+        humidity: { min: 60, max: 80 },
+        temperature: { min: 21, max: 29 }
     },
-    cotton: {
-        baseYield: 4.5,
-        cropName: 'Algodão',
-        idealTemp: { min: 23, max: 33 },
-        idealHumidity: { min: 55, max: 75 },
-        idealPrecip: { min: 600, max: 800 },
-        cropCycle: 180,
-        waterNeed: 800
-    }
+    'Cana-de-açúcar': {
+        evapotranspiration: { min: 1500, max: 2000 },
+        solarRadiation: { min: 18, max: 24 },
+        precipitation: { min: 1200, max: 1800 },
+        humidity: { min: 70, max: 80 },
+        temperature: { min: 24, max: 30 }
+    },
+    // Adicione as outras culturas aqui conforme fornecido
 };
 
 // Fatores de solo
@@ -114,6 +109,7 @@ window.onload = async function() {
         hideLoadingAnimation();
     }
 };
+
 // Inicialização do Mapa
 async function initMap() {
     try {
@@ -304,6 +300,7 @@ function updateLocationWarning() {
         warning.style.display = window.climateData ? 'none' : 'flex';
     }
 }
+
 // Busca de Dados da NASA
 async function getNASAData(lat, lng) {
     const endDate = new Date();
@@ -315,8 +312,8 @@ async function getNASAData(lat, lng) {
     };
 
     const params = new URLSearchParams({
-        parameters: 'T2M,PRECTOT,RH2M',
-        community: 'AG',
+        parameters: 'T2M,PRECTOTCORR,ALLSKY_SFC_SW_DWN,RH2M',
+        community: 'RE',
         longitude: lng.toFixed(4),
         latitude: lat.toFixed(4),
         start: formatDate(startDate),
@@ -356,8 +353,13 @@ function processClimateData(data) {
             max: Math.max(...Object.values(params.RH2M))
         },
         precipitation: {
-            total: Object.values(params.PRECTOT).reduce((a, b) => a + b, 0),
-            daily: calculateAverage(Object.values(params.PRECTOT))
+            total: Object.values(params.PRECTOTCORR).reduce((a, b) => a + b, 0),
+            daily: calculateAverage(Object.values(params.PRECTOTCORR))
+        },
+        solarRadiation: {
+            avg: calculateAverage(Object.values(params.ALLSKY_SFC_SW_DWN)),
+            min: Math.min(...Object.values(params.ALLSKY_SFC_SW_DWN)),
+            max: Math.max(...Object.values(params.ALLSKY_SFC_SW_DWN))
         }
     };
 
@@ -374,7 +376,8 @@ function analyzeClimateForPeriod(startDate, endDate) {
     return {
         temperature: analyzeTemperature(relevantData.T2M),
         humidity: analyzeHumidity(relevantData.RH2M),
-        precipitation: analyzePrecipitation(relevantData.PRECTOT)
+        precipitation: analyzePrecipitation(relevantData.PRECTOTCORR),
+        solarRadiation: analyzeSolarRadiation(relevantData.ALLSKY_SFC_SW_DWN)
     };
 }
 
@@ -407,6 +410,16 @@ function analyzePrecipitation(precipData) {
         average: calculateAverage(values),
         daysWithRain: values.filter(v => v > 0).length,
         distribution: calculateDistribution(values)
+    };
+}
+
+function analyzeSolarRadiation(solarData) {
+    const values = Object.values(solarData);
+    return {
+        avg: calculateAverage(values),
+        min: Math.min(...values),
+        max: Math.max(...values),
+        variance: calculateVariance(values)
     };
 }
 
@@ -470,18 +483,20 @@ function getClimateStatus(conditions, crop) {
     const cropData = CROP_DATA[crop];
     if (!cropData) return 'unknown';
 
-    const tempStatus = getTemperatureStatus(conditions.temperature.avg, cropData.idealTemp);
-    const humidityStatus = getHumidityStatus(conditions.humidity.avg, cropData.idealHumidity);
-    const precipStatus = getPrecipitationStatus(conditions.precipitation.total, cropData.idealPrecip);
+    const tempStatus = getTemperatureStatus(conditions.temperature.avg, cropData.temperature);
+    const humidityStatus = getHumidityStatus(conditions.humidity.avg, cropData.humidity);
+    const precipStatus = getPrecipitationStatus(conditions.precipitation.total, cropData.precipitation);
+    const solarStatus = getSolarRadiationStatus(conditions.solarRadiation.avg, cropData.solarRadiation);
 
     // Combinar status individuais para status geral
-    const statuses = [tempStatus, humidityStatus, precipStatus];
+    const statuses = [tempStatus, humidityStatus, precipStatus, solarStatus];
     const idealCount = statuses.filter(s => s === 'ideal').length;
 
-    if (idealCount >= 2) return 'favorable';
-    if (idealCount >= 1) return 'moderate';
+    if (idealCount >= 3) return 'favorable';
+    if (idealCount >= 2) return 'moderate';
     return 'unfavorable';
 }
+
 // Simulação de Colheita
 async function handleSimulation(event) {
     event.preventDefault();
@@ -611,17 +626,22 @@ function analyzeHistoricalConditions(date, cropType, climateData) {
     return {
         temperature: {
             value: historicalData.temperature,
-            ideal: crop.idealTemp,
-            status: getTemperatureStatus(historicalData.temperature, crop.idealTemp)
+            ideal: crop.temperature,
+            status: getTemperatureStatus(historicalData.temperature, crop.temperature)
         },
         humidity: {
             value: historicalData.humidity,
-            ideal: crop.idealHumidity,
-            status: getHumidityStatus(historicalData.humidity, crop.idealHumidity)
+            ideal: crop.humidity,
+            status: getHumidityStatus(historicalData.humidity, crop.humidity)
         },
         precipitation: {
             value: historicalData.precipitation,
             status: getPrecipitationStatus(historicalData.precipitation)
+        },
+        solarRadiation: {
+            value: historicalData.solarRadiation,
+            ideal: crop.solarRadiation,
+            status: getSolarRadiationStatus(historicalData.solarRadiation, crop.solarRadiation)
         }
     };
 }
@@ -631,17 +651,20 @@ function calculateSuccessProbability(conditions, crop) {
     const weights = {
         temperature: 0.4,
         humidity: 0.3,
-        precipitation: 0.3
+        precipitation: 0.2,
+        solarRadiation: 0.1
     };
 
     const tempScore = calculateTemperatureScore(conditions.temperature, crop);
     const humidityScore = calculateHumidityScore(conditions.humidity, crop);
     const precipScore = calculatePrecipitationScore(conditions.precipitation, crop);
+    const solarScore = calculateSolarRadiationScore(conditions.solarRadiation, crop);
 
     const weightedScore = 
         (tempScore * weights.temperature) +
         (humidityScore * weights.humidity) +
-        (precipScore * weights.precipitation);
+        (precipScore * weights.precipitation) +
+        (solarScore * weights.solarRadiation);
 
     // Converter para porcentagem e limitar entre 5% e 95%
     return Math.min(95, Math.max(5, weightedScore * 100));
@@ -649,7 +672,7 @@ function calculateSuccessProbability(conditions, crop) {
 
 // Funções de Pontuação
 function calculateTemperatureScore(temp, crop) {
-    const { min, max } = crop.idealTemp;
+    const { min, max } = crop.temperature;
     const value = temp.value;
 
     if (value >= min && value <= max) return 1;
@@ -663,7 +686,7 @@ function calculateTemperatureScore(temp, crop) {
 }
 
 function calculateHumidityScore(humidity, crop) {
-    const { min, max } = crop.idealHumidity;
+    const { min, max } = crop.humidity;
     const value = humidity.value;
 
     if (value >= min && value <= max) return 1;
@@ -683,6 +706,21 @@ function calculatePrecipitationScore(precip, crop) {
     const deviation = Math.abs(value - ideal);
     return Math.max(0, 1 - (deviation / ideal));
 }
+
+function calculateSolarRadiationScore(solar, crop) {
+    const { min, max } = crop.solarRadiation;
+    const value = solar.value;
+
+    if (value >= min && value <= max) return 1;
+    
+    const deviation = Math.min(
+        Math.abs(value - min),
+        Math.abs(value - max)
+    );
+
+    return Math.max(0, 1 - (deviation / 5));
+}
+
 // Gerenciamento de Telas
 function showScreen(screenName) {
     const content = document.getElementById('content');
@@ -890,6 +928,11 @@ function createConditionIcons(conditions) {
             ideal: '☔',
             high: '⛈️',
             low: '☀️'
+        },
+        solarRadiation: {
+            ideal: '☀️',
+            high: '🌞',
+            low: '🌥️'
         }
     };
 
@@ -903,8 +946,12 @@ function createConditionIcons(conditions) {
         <span title="Precipitação: ${conditions.precipitation.status}">
             ${icons.precipitation[conditions.precipitation.status]}
         </span>
+        <span title="Radiação Solar: ${conditions.solarRadiation.status}">
+            ${icons.solarRadiation[conditions.solarRadiation.status]}
+        </span>
     `;
 }
+
 // Interface Functions
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -1147,182 +1194,4 @@ function initializeResultCharts(results, probabilities) {
             }
         }
     });
-}
-// Simulação de Colheita
-async function getNASAData(lat, lng) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(endDate.getFullYear() - 1);
-    
-    const formatDate = (date) => {
-        return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    };
-
-    const params = new URLSearchParams({
-        parameters: 'T2M,PRECTOT,RH2M',
-        community: 'AG',
-        longitude: lng.toFixed(4),
-        latitude: lat.toFixed(4),
-        start: formatDate(startDate),
-        end: formatDate(endDate),
-        format: 'JSON',
-        api_key: CONFIG.NASA_API.KEY
-    });
-
-    try {
-        const response = await fetch(`${CONFIG.NASA_API.URL}?${params}`);
-        if (!response.ok) throw new Error('Erro na requisição à API da NASA');
-        
-        const data = await response.json();
-        if (!data || !data.properties || !data.properties.parameter) {
-            throw new Error('Dados climáticos inválidos');
-        }
-        
-        const processed = processClimateData(data);
-        if (processed) {
-            window.climateData = data;
-            return data;
-        }
-        throw new Error('Erro ao processar dados climáticos');
-    } catch (error) {
-        console.error('Erro ao buscar dados climáticos:', error);
-        showError('Não foi possível obter dados climáticos para esta localização');
-        return null;
-    }
-}
-
-// Processamento de Dados Climáticos
-function processClimateData(data) {
-    if (!data?.properties?.parameter) return null;
-
-    const params = data.properties.parameter;
-    if (!params.T2M || !params.RH2M || !params.PRECTOT) return null;
-
-    const processed = {
-        temperature: {
-            avg: calculateAverage(Object.values(params.T2M || {})),
-            min: Math.min(...Object.values(params.T2M || {})),
-            max: Math.max(...Object.values(params.T2M || {}))
-        },
-        humidity: {
-            avg: calculateAverage(Object.values(params.RH2M || {})),
-            min: Math.min(...Object.values(params.RH2M || {})),
-            max: Math.max(...Object.values(params.RH2M || {}))
-        },
-        precipitation: {
-            total: Object.values(params.PRECTOT || {}).reduce((a, b) => a + b, 0),
-            daily: calculateAverage(Object.values(params.PRECTOT || {}))
-        }
-    };
-
-    return processed;
-}
-
-// Gerenciamento de Telas
-function showScreen(screenName) {
-    const content = document.getElementById('content');
-    const mapContainer = document.getElementById('map-container');
-
-    if (screenName === 'home') {
-        if (content) content.style.display = 'none';
-        if (mapContainer) mapContainer.style.display = 'block';
-        // Apenas chame invalidateSize se o mapa existir
-        if (map && typeof map.invalidateSize === 'function') {
-            map.invalidateSize();
-        }
-    } else {
-        if (content) content.style.display = 'block';
-        if (mapContainer) mapContainer.style.display = 'none';
-        
-        showLoadingAnimation();
-        
-        switch(screenName) {
-            case 'simulation':
-                loadSimulationScreen();
-                break;
-            case 'news':
-                loadNewsScreen();
-                break;
-            case 'history':
-                loadHistoryScreen();
-                break;
-        }
-
-        hideLoadingAnimation();
-    }
-
-    // Fechar sidebar
-    toggleSidebar();
-}
-
-// Notícias
-async function loadNewsScreen() {
-    const content = document.getElementById('content');
-    if (!content) return;
-    
-    content.innerHTML = '<div class="news-container"><h2>Notícias do Agro</h2><div class="news-grid" id="newsGrid"></div></div>';
-    
-    try {
-        const news = await fetchAgriNews();
-        if (news && news.length > 0) {
-            displayNews(news);
-        } else {
-            const newsGrid = document.getElementById('newsGrid');
-            if (newsGrid) {
-                newsGrid.innerHTML = '<p>Nenhuma notícia disponível no momento</p>';
-            }
-        }
-    } catch (error) {
-        console.error('Erro ao carregar notícias:', error);
-        const newsGrid = document.getElementById('newsGrid');
-        if (newsGrid) {
-            newsGrid.innerHTML = '<p>Erro ao carregar notícias</p>';
-        }
-    }
-}
-
-// Inicialização do Mapa
-async function initMap() {
-    try {
-        // Verificar se Leaflet está carregado
-        if (!window.L) {
-            throw new Error('Leaflet não está carregado');
-        }
-
-        // Criar o mapa apenas se o elemento existir
-        const mapElement = document.getElementById('map');
-        if (!mapElement) {
-            throw new Error('Elemento do mapa não encontrado');
-        }
-
-        map = L.map('map', {
-            zoomControl: false,
-            minZoom: 4,
-            maxZoom: 18
-        }).setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
-        
-        // Adicionar controles de zoom
-        L.control.zoom({
-            position: 'topleft'
-        }).addTo(map);
-
-        // Adicionar camada base do mapa
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Mostrar popup inicial
-        showInitialPopup();
-        
-        // Configurar busca e eventos
-        setupSearch();
-        setupMapEvents();
-        
-        // Carregar localização salva
-        loadSavedLocation();
-
-    } catch (error) {
-        console.error('Erro ao inicializar mapa:', error);
-        showError('Erro ao carregar o mapa. Por favor, recarregue a página.');
-    }
 }

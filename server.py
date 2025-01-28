@@ -1,22 +1,44 @@
-import http.server
-import socketserver
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import ssl
 
-PORT = 8000
+class CORSRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type')
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        return super().end_headers()
 
-Handler = http.server.SimpleHTTPRequestHandler
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
 
-Handler.extensions_map = {
-    '.manifest': 'text/cache-manifest',
-    '.html': 'text/html',
-    '.png': 'image/png',
-    '.jpg': 'image/jpg',
-    '.svg': 'image/svg+xml',
-    '.css': 'text/css',
-    '.js': 'application/x-javascript',
-    '': 'application/octet-stream',
-}
+    def guess_type(self, path):
+        mimetype = super().guess_type(path)
+        if mimetype == None:
+            if path.endswith('.js'):
+                return 'application/javascript'
+            elif path.endswith('.css'):
+                return 'text/css'
+            elif path.endswith('.json'):
+                return 'application/json'
+            elif path.endswith('.html'):
+                return 'text/html'
+        return mimetype
 
-httpd = socketserver.TCPServer(("", PORT), Handler)
+def run_server(port=8000):
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, CORSRequestHandler)
+    
+    print(f'Iniciando servidor em http://localhost:{port}')
+    print('Para acessar, abra o navegador e digite: http://localhost:8000')
+    print('Para parar o servidor, pressione Ctrl+C')
+    
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\nServidor encerrado.')
+        httpd.server_close()
 
-print(f"Servidor rodando na porta {PORT}...")
-httpd.serve_forever()
+if __name__ == '__main__':
+    run_server()
